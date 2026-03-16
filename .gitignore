@@ -1,0 +1,21 @@
+# Ignore dependency directories
+node_modules/
+
+# Ignore environment files
+.env
+*.env.local
+
+# Ignore Expo build cache
+.expo/
+
+# Ignore log files
+*.log
+
+# Ignore macOS metadata
+.DS_Store
+
+# Ignore test coverage output
+coverage/
+
+# Ignore Supabase local state
+.supabase/

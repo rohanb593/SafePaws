@@ -1,0 +1,15 @@
+-- Creates the 'chat_messages' table
+--
+-- Columns: id (uuid PK), sender_id (FK → profiles.id), receiver_id (FK → profiles.id),
+--          message (text NOT NULL), read_status (bool default false),
+--          thread_id (text NOT NULL),  ← booking_id or ticket_id
+--          created_at (timestamptz default now())
+--
+-- Index: on thread_id for fast thread queries
+-- Supabase Realtime: enabled on this table for live chat updates
+--
+-- RLS policies:
+--   SELECT/INSERT: only sender or receiver (auth.uid() IN (sender_id, receiver_id))
+--   DELETE: only sender
+--
+-- Satisfies: RQ13

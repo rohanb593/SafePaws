@@ -1,0 +1,10 @@
+-- Creates the 'pets' table
+--
+-- Columns: id (uuid PK), owner_id (FK → profiles.id ON DELETE CASCADE),
+--          pet_type, breed, name, created_at
+--
+-- RLS policies:
+--   SELECT: owner can read their own pets; minders can read pets in their bookings
+--   INSERT/UPDATE/DELETE: only the owner (auth.uid() = owner_id)
+--
+-- Satisfies: RQ4, RQ15, RQ30

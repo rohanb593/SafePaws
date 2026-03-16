@@ -1,0 +1,15 @@
+-- Creates the 'tickets' table
+--
+-- Columns: id (uuid PK), query_type (text), status (default 'pending'),
+--          priority ('low' | 'medium' | 'high'), by_user (FK → profiles.id),
+--          category ('pet_owner' | 'pet_minder' | 'technical'),
+--          issue_description (text), created_at, updated_at
+--
+-- CHECK: status IN ('pending', 'opened', 'closed')
+--
+-- RLS policies:
+--   SELECT: creator reads own tickets; admin/customer_support reads all
+--   INSERT: pet_owner or pet_minder roles
+--   UPDATE (status): admin or customer_support only
+--
+-- Satisfies: RQ37, RQ38, RQ39, RQ40, RQ42, RQ43, RQ44

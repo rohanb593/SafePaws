@@ -1,0 +1,17 @@
+{
+  "expo": {
+    "name": "SafePaws",
+    "slug": "safe-paws",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "platforms": ["ios", "android"],
+    "plugins": [
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Allow SafePaws to use your location for pet tracking."
+        }
+      ]
+    ]
+  }
+}

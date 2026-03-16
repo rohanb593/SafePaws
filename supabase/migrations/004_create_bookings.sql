@@ -1,0 +1,15 @@
+-- Creates the 'bookings' table
+--
+-- Columns: id (uuid PK), pet_id (FK → pets.id), owner_id (FK → profiles.id),
+--          minder_id (FK → profiles.id), location, status (default 'pending'),
+--          start_time (timestamptz), end_time (timestamptz),
+--          is_recurring (bool default false), recurring_schedule (text), created_at
+--
+-- CHECK: status IN ('pending', 'confirmed', 'cancelled', 'completed')
+--
+-- RLS policies:
+--   SELECT: owner or minder on the booking
+--   INSERT: pet_owner role only
+--   UPDATE: minder can update status; owner can cancel (pending only)
+--
+-- Satisfies: RQ8, RQ9, RQ11, RQ18, RQ21, RQ24, RQ52

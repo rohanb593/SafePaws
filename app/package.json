@@ -1,0 +1,3 @@
+// React Native (Expo) app package config
+// Dependencies: expo, react-native, @supabase/supabase-js, @reduxjs/toolkit, react-redux,
+//               @react-navigation/native, expo-location, react-native-maps
