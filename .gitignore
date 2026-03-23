@@ -19,3 +19,5 @@ coverage/
 
 # Ignore Supabase local state
 .supabase/
+
+memory/

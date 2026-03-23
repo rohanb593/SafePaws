@@ -1,5 +1,14 @@
 // Root Redux store
-// Combines: authReducer, bookingReducer, listingsReducer, chatReducer, ticketReducer
-// Exports: store, RootState, AppDispatch
-// Note: Supabase client lives in lib/supabase.ts, not in the store.
-//       Store only holds UI state and cached data.
+// Note: only authReducer wired up for now — other slices added as features are built
+
+import { configureStore } from '@reduxjs/toolkit'
+import authReducer from './authSlice'
+
+export const store = configureStore({
+  reducer: {
+    auth: authReducer,
+  },
+})
+
+export type RootState = ReturnType<typeof store.getState>
+export type AppDispatch = typeof store.dispatch

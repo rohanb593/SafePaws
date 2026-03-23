@@ -1,1 +1,1 @@
-// App entry point — registers the root React Native component with Expo
+// Source root for the SafePaws app — screens, hooks, store, and types live in src/

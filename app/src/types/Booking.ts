@@ -1,19 +1,30 @@
 // Booking (RQ8, RQ18, RQ21, RQ24, RQ52)
-//
-// Table: bookings
-// Columns:
-//   id: string (uuid, primary key)
-//   pet_id: string (uuid, FK → pets.id)
-//   owner_id: string (uuid, FK → profiles.id)
-//   minder_id: string (uuid, FK → profiles.id)
-//   location: string
-//   status: 'pending' | 'confirmed' | 'cancelled' | 'completed'
-//   start_time: string (ISO 8601)
-//   end_time: string (ISO 8601)
-//   is_recurring: boolean                   (RQ52)
-//   recurring_schedule: string | null       ('weekly' | 'custom')
-//   created_at: string
-//
-// RLS: owner and minder can both read; only owner can insert; minder updates status
-//
-// Exports: BookingStatus type, Booking interface, BookingDetails interface
+// requester_id = the user who requested the booking (acting as owner)
+// minder_id    = the user who accepted the booking (acting as minder)
+// Both fields FK → profiles.id — any user can be on either side.
+
+export type BookingStatus = 'pending' | 'confirmed' | 'cancelled' | 'completed'
+
+export interface Booking {
+  id: string
+  pet_id: string
+  requester_id: string
+  minder_id: string
+  location: string
+  status: BookingStatus
+  start_time: string
+  end_time: string
+  is_recurring: boolean
+  recurring_schedule: string | null
+  created_at: string
+}
+
+export interface BookingDetails {
+  pet_id: string
+  minder_id: string
+  location: string
+  start_time: string
+  end_time: string
+  is_recurring?: boolean
+  recurring_schedule?: string
+}

@@ -1,3 +1,5 @@
-// React Native (Expo) app package config
-// Dependencies: expo, react-native, @supabase/supabase-js, @reduxjs/toolkit, react-redux,
-//               @react-navigation/native, expo-location, react-native-maps
+{
+  "name": "safepaws-app",
+  "version": "1.0.0",
+  "private": true
+}
