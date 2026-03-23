@@ -14,18 +14,6 @@ export interface RegisterInput {
   phone: string
 }
 
-// Holds profile data between signup and first confirmed login.
-// When email confirmation is on, signUp returns no session so the profiles
-// insert is blocked by RLS. We cache it here and complete on first login.
-let pendingProfile: {
-  id: string
-  username: string
-  display_name: string
-  email: string
-  phone: string
-  location: string
-} | null = null
-
 export function useAuth() {
   const dispatch = useDispatch()
   const [loading, setLoading] = useState(false)
@@ -43,42 +31,11 @@ export function useAuth() {
       return false
     }
 
-    // Set phone on the auth user now that we have a session.
-    // We read it from the auth metadata that was stored during signup.
-    const phone = data.user.user_metadata?.phone
-    if (phone) {
-      await supabase.auth.updateUser({ phone })
-    }
-
-    // Fetch existing profile
-    let { data: profile } = await supabase
+    const { data: profile } = await supabase
       .from('profiles')
       .select('*')
       .eq('id', data.user.id)
       .single()
-
-    // No profile yet means the user confirmed email but the insert hadn't run.
-    // Complete it now using the cached data from signup.
-    if (!profile && pendingProfile?.id === data.user.id) {
-      const { error: insertError } = await supabase
-        .from('profiles')
-        .insert(pendingProfile)
-
-      if (insertError) {
-        setError(insertError.message)
-        setLoading(false)
-        return false
-      }
-
-      const { data: newProfile } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', data.user.id)
-        .single()
-
-      profile = newProfile
-      pendingProfile = null
-    }
 
     if (!profile) {
       setError('Profile not found. Please contact support.')
@@ -124,42 +81,32 @@ export function useAuth() {
       return false
     }
 
-    // Only insert the fields we have values for — do NOT pass enum columns
-    // (preferred_communication, role, account_status) as plain strings because
-    // Supabase cannot implicitly cast them to custom enum types, which causes
-    // the entire insert to fail. Let the DB defaults handle them.
-    const profileData = {
-      id: data.user.id,
-      username,
-      display_name: input.full_name,
-      email: input.email,
-      phone: input.phone,
-      location: input.location,
-    }
-
-    // Step 2 — try to insert the profile.
-    // Works immediately when email confirmation is disabled (session exists).
-    // When confirmation is required there is no session, so RLS may block this.
-    // In that case cache the data and retry on first login.
     const { error: profileError } = await supabase
       .from('profiles')
-      .insert(profileData)
+      .insert({
+        id: data.user.id,
+        username,
+        display_name: input.full_name,
+        email: input.email,
+        phone: input.phone,
+        location: input.location,
+      })
 
     if (profileError) {
-      // Cache for retry on login
-      pendingProfile = profileData
-    } else if (data.session) {
-      // Email confirmation off — session exists, set phone on auth user now
-      await supabase.auth.updateUser({ phone: input.phone })
-
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', data.user.id)
-        .single()
-
-      if (profile) dispatch(setUser(profile as User))
+      setError(profileError.message)
+      setLoading(false)
+      return false
     }
+
+    await supabase.auth.updateUser({ phone: input.phone })
+
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', data.user.id)
+      .single()
+
+    if (profile) dispatch(setUser(profile as User))
 
     setLoading(false)
     return true
@@ -170,12 +117,15 @@ export function useAuth() {
     dispatch(logoutAction())
   }
 
-  async function resetPassword(email: string): Promise<boolean> {
+  async function sendOtp(email: string): Promise<boolean> {
     setLoading(true)
     setError(null)
-    const { error: resetError } = await supabase.auth.resetPasswordForEmail(email)
-    if (resetError) {
-      setError(resetError.message)
+    const { error: otpError } = await supabase.auth.signInWithOtp({
+      email,
+      options: { shouldCreateUser: false },
+    })
+    if (otpError) {
+      setError(otpError.message)
       setLoading(false)
       return false
     }
@@ -183,5 +133,35 @@ export function useAuth() {
     return true
   }
 
-  return { login, register, logout, resetPassword, loading, error }
+  async function verifyOtp(email: string, token: string): Promise<boolean> {
+    setLoading(true)
+    setError(null)
+    const { error: verifyError } = await supabase.auth.verifyOtp({
+      email,
+      token,
+      type: 'email',
+    })
+    if (verifyError) {
+      setError(verifyError.message)
+      setLoading(false)
+      return false
+    }
+    setLoading(false)
+    return true
+  }
+
+  async function updatePassword(password: string): Promise<boolean> {
+    setLoading(true)
+    setError(null)
+    const { error: updateError } = await supabase.auth.updateUser({ password })
+    if (updateError) {
+      setError(updateError.message)
+      setLoading(false)
+      return false
+    }
+    setLoading(false)
+    return true
+  }
+
+  return { login, register, logout, sendOtp, verifyOtp, updatePassword, loading, error }
 }

@@ -17,7 +17,6 @@ export default function RegisterScreen({ navigation }: any) {
   })
   const [confirmPassword, setConfirmPassword] = useState('')
   const [errors, setErrors] = useState<Partial<Record<keyof RegisterInput | 'confirmPassword', string>>>({})
-  const [success, setSuccess] = useState(false)
   const { register, loading, error } = useAuth()
 
   function set(field: keyof RegisterInput, value: string) {
@@ -42,20 +41,7 @@ export default function RegisterScreen({ navigation }: any) {
   async function handleRegister() {
     if (!validate()) return
     const ok = await register(form)
-    if (ok) setSuccess(true)
-  }
-
-  if (success) {
-    return (
-      <View style={styles.successContainer}>
-        <Text style={styles.title}>Check your email</Text>
-        <Text style={styles.subtitle}>
-          We sent a confirmation link to {form.email}.{'\n\n'}
-          Click the link to verify your account, then come back and log in.
-        </Text>
-        <Button label="Go to Login" onPress={() => navigation.navigate('Login')} />
-      </View>
-    )
+    if (ok) navigation.navigate('Login')
   }
 
   return (
@@ -116,7 +102,6 @@ export default function RegisterScreen({ navigation }: any) {
 
 const styles = StyleSheet.create({
   container: { padding: 24, backgroundColor: '#f9f9f9', flexGrow: 1 },
-  successContainer: { flex: 1, padding: 24, justifyContent: 'center', backgroundColor: '#f9f9f9' },
   title: { fontSize: 28, fontWeight: 'bold', color: '#2E7D32', textAlign: 'center', marginBottom: 20, marginTop: 40 },
   subtitle: { fontSize: 15, color: '#555', textAlign: 'center', marginBottom: 24 },
   errorBanner: { backgroundColor: '#fdecea', color: '#c0392b', padding: 10, borderRadius: 8, marginBottom: 12 },

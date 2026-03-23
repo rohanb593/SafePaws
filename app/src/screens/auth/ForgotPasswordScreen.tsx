@@ -10,34 +10,23 @@ import { isValidEmail, isRequired } from '../../utils/validators'
 export default function ForgotPasswordScreen({ navigation }: any) {
   const [email, setEmail] = useState('')
   const [emailError, setEmailError] = useState('')
-  const [sent, setSent] = useState(false)
-  const { resetPassword, loading, error } = useAuth()
+  const { sendOtp, loading, error } = useAuth()
 
-  async function handleReset() {
+  async function handleSendCode() {
     if (!isRequired(email)) { setEmailError('Email is required'); return }
     if (!isValidEmail(email)) { setEmailError('Invalid email'); return }
     setEmailError('')
-    await resetPassword(email)
-    if (!error) setSent(true)
-  }
-
-  if (sent) {
-    return (
-      <View style={styles.container}>
-        <Text style={styles.title}>Email sent</Text>
-        <Text style={styles.subtitle}>Check your inbox for a reset link.</Text>
-        <Button label="Back to Login" onPress={() => navigation.navigate('Login')} />
-      </View>
-    )
+    const ok = await sendOtp(email)
+    if (ok) navigation.navigate('VerifyOtp', { email })
   }
 
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Reset Password</Text>
-      <Text style={styles.subtitle}>Enter your email and we'll send you a reset link.</Text>
+      <Text style={styles.subtitle}>Enter your email and we'll send you a 6-digit code.</Text>
       {error ? <Text style={styles.errorBanner}>{error}</Text> : null}
       <Input label="Email" value={email} onChangeText={setEmail} placeholder="you@example.com" error={emailError} />
-      <Button label="Send Reset Link" onPress={handleReset} loading={loading} />
+      <Button label="Send Code" onPress={handleSendCode} loading={loading} />
       <TouchableOpacity onPress={() => navigation.navigate('Login')} style={styles.link}>
         <Text style={styles.linkText}>Back to Login</Text>
       </TouchableOpacity>
