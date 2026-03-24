@@ -1,0 +1,12 @@
+-- Creates the 'profiles' table linked to Supabase auth.users
+--
+-- Columns: id (uuid PK, FK → auth.users), username (unique), display_name, location,
+--          preferences, email, phone, preferred_communication, role, account_status,
+--          vet_clinic_name, vet_clinic_phone, vet_clinic_address, experience,
+--          ratings, pet_info, created_at
+--
+-- RLS policies:
+--   SELECT: authenticated users can read all profiles
+--   UPDATE: users can only update their own row (auth.uid() = id)
+--
+-- Satisfies: RQ1, RQ26, RQ28, RQ29, RQ32, NF7 (UK GDPR — RLS enforced)

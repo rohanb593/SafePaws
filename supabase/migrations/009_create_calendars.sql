@@ -1,0 +1,14 @@
+-- Creates the 'calendars' table
+--
+-- Columns: id (uuid PK), minder_id (uuid UNIQUE FK → profiles.id),
+--          available_timing (jsonb default '[]'),  ← TimeSlot[]
+--          booked_timing (jsonb default '[]')       ← TimeSlot[]
+--
+-- One-to-one with PetMinder (minder_id is UNIQUE)
+--
+-- RLS policies:
+--   SELECT: all authenticated users (needed for booking availability check)
+--   UPDATE: only the minder (auth.uid() = minder_id)
+--   INSERT: only the minder
+--
+-- Satisfies: RQ12, RQ20

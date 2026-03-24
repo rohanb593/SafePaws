@@ -1,0 +1,12 @@
+-- Creates the 'listings' table
+--
+-- Columns: id (uuid PK), user_id (FK → profiles.id), profile, location (NOT NULL),
+--          description, listing_type ('owner_listing' | 'minder_listing'),
+--          animal (text, nullable), time (text, nullable),
+--          price (numeric, nullable), rating (numeric, nullable), created_at
+--
+-- RLS policies:
+--   SELECT: all authenticated users
+--   INSERT/DELETE: only the listing owner (auth.uid() = user_id)
+--
+-- Satisfies: RQ33, RQ34, RQ35, RQ36

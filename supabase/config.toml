@@ -1,0 +1,3 @@
+# Supabase project configuration
+# Used by Supabase CLI for local development (supabase start / supabase db push)
+# Configure: project_id, api port, db port, auth settings, storage settings

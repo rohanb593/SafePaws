@@ -1,0 +1,4 @@
+-- Optional seed data for local development
+-- Insert test users: one PetOwner, one PetMinder, one Admin, one CustomerSupport
+-- Insert sample pets, listings, and one pending booking
+-- Used only locally — never run against production

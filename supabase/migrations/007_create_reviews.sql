@@ -1,0 +1,10 @@
+-- Creates the 'reviews' table
+--
+-- Columns: id (uuid PK), reviewer_id (FK → profiles.id), reviewee_id (FK → profiles.id),
+--          rating (int2, CHECK 1 <= rating <= 5), comment (text), date (timestamptz)
+--
+-- RLS policies:
+--   SELECT: all authenticated users
+--   INSERT: any authenticated user (once per booking — enforce in app logic)
+--
+-- Satisfies: RQ31

@@ -1,0 +1,13 @@
+-- Creates the 'medical_records' table
+--
+-- Columns: id (uuid PK), pet_id (FK → pets.id ON DELETE CASCADE),
+--          vet_name, vet_clinic, vet_phone,
+--          vaccine_info (jsonb), medical_history, allergies (text[])
+--
+-- ON DELETE CASCADE: if pet is deleted, its medical records are deleted (composition, RQ5)
+--
+-- RLS policies:
+--   SELECT: pet owner and any minder with active booking for that pet
+--   INSERT: pet owner only
+--
+-- Satisfies: RQ5
