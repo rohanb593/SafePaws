@@ -11,3 +11,42 @@
 --   INSERT: pet owner only
 --
 -- Satisfies: RQ5
+CREATE TABLE public.medical_records (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  pet_id uuid NOT NULL REFERENCES public.pets(id) ON DELETE CASCADE,
+  vet_name text NOT NULL DEFAULT '',
+  vet_clinic text NOT NULL DEFAULT '',
+  vet_phone text NOT NULL DEFAULT '',
+  vaccine_info jsonb NOT NULL DEFAULT '[]',
+  medical_history text NOT NULL DEFAULT '',
+  allergies text[] NOT NULL DEFAULT '{}'
+);
+
+ALTER TABLE public.medical_records ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Owners can read their own medical records"
+  ON public.medical_records FOR SELECT
+  TO authenticated
+  USING (
+    auth.uid() = (
+      SELECT owner_id FROM public.pets WHERE id = pet_id
+    )
+  );
+
+CREATE POLICY "Owners can insert medical records for their pets"
+  ON public.medical_records FOR INSERT
+  TO authenticated
+  WITH CHECK (
+    auth.uid() = (
+      SELECT owner_id FROM public.pets WHERE id = pet_id
+    )
+  );
+
+CREATE POLICY "Owners can update medical records for their pets"
+  ON public.medical_records FOR UPDATE
+  TO authenticated
+  USING (
+    auth.uid() = (
+      SELECT owner_id FROM public.pets WHERE id = pet_id
+    )
+  );
