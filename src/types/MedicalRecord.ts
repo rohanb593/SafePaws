@@ -13,3 +13,20 @@
 //   allergies: string[]
 //
 // Exports: MedicalRecord interface, VaccineRecord interface
+
+export interface VaccineRecord {
+  vaccine_name: string
+  date_administered: string
+  next_due_date: string
+}
+
+export interface MedicalRecord {
+  id: string
+  pet_id: string
+  vet_name: string
+  vet_clinic: string
+  vet_phone: string
+  vaccine_info: VaccineRecord[]
+  medical_history: string
+  allergies: string[]
+}

@@ -16,3 +16,26 @@
 //
 // Exports: TicketStatus type, TicketCategory type, TicketPriority type,
 //          Ticket interface, NewTicketInput interface
+export type TicketStatus = 'pending' | 'opened' | 'closed'
+export type TicketPriority = 'low' | 'medium' | 'high'
+export type TicketCategory = 'pet_owner' | 'pet_minder' | 'technical'
+
+export interface Ticket {
+  id: string
+  query_type: string
+  status: TicketStatus
+  priority: TicketPriority
+  by_user: string
+  category: TicketCategory
+  issue_description: string
+  created_at: string
+  updated_at: string
+}
+
+export interface NewTicketInput {
+  query_type: string
+  priority: TicketPriority
+  by_user: string
+  category: TicketCategory
+  issue_description: string
+}

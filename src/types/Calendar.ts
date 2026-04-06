@@ -10,3 +10,21 @@
 // RLS: minder can update their own; any authenticated user can read
 //
 // Exports: Calendar interface, TimeSlot interface, GPSCoordinates interface
+export interface TimeSlot {
+  day: string
+  start: string
+  end: string
+}
+
+export interface Calendar {
+  id: string
+  minder_id: string
+  available_timing: TimeSlot[]
+  booked_timing: TimeSlot[]
+}
+
+export interface GPSCoordinates {
+  latitude: number
+  longitude: number
+  updated_at: string
+}
