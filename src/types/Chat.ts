@@ -18,3 +18,26 @@
 //     filter: `thread_id=eq.${threadID}` }, callback)
 //
 // Exports: ChatMessage interface, SendMessageInput interface
+export interface ChatMessage {
+  id: string
+  sender_id: string
+  receiver_id: string
+  message: string
+  read_status: boolean
+  thread_id: string
+  created_at: string
+}
+
+export interface SendMessageInput {
+  sender_id: string
+  receiver_id: string
+  message: string
+  thread_id: string
+}
+
+export interface ChatThread {
+  thread_id: string
+  other_user_id: string
+  last_message: ChatMessage
+  unread_count: number
+}

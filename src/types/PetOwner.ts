@@ -21,3 +21,22 @@
 //   leaveReview(input: ReviewInput): Promise<Review>
 //   addPet(pet: NewPetInput): Promise<Pet>
 //   addPetInfo(petID: string, info: Partial<Pet>): Promise<Pet>
+import { User } from './User'
+import { Pet } from './Pet'
+
+export interface SearchFilters {
+  location?: string
+  max_price?: number
+  min_rating?: number
+  animal_type?: string
+}
+
+export interface PetOwner extends User {
+  animal_types: string[]
+  pet_info: string
+  saved_filter_location: string | null
+  saved_filter_max_price: number | null
+  saved_filter_min_rating: number | null
+  saved_filter_animal_type: string | null
+  pets?: Pet[]
+}

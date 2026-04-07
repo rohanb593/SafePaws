@@ -12,3 +12,21 @@
 // RLS: any authenticated user can read; only reviewer can insert their own
 //
 // Exports: Review interface, ReviewInput interface
+export interface Review {
+  id: string
+  reviewer_id: string
+  reviewee_id: string
+  booking_id: string | null
+  rating: 1 | 2 | 3 | 4 | 5
+  comment: string
+  date: string
+}
+
+export interface ReviewInput {
+  reviewer_id: string
+  reviewee_id: string
+  booking_id: string | null
+  rating: 1 | 2 | 3 | 4 | 5
+  comment: string
+}
+

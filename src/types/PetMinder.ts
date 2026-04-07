@@ -18,3 +18,15 @@
 //   acceptJob(bookingID: string): Promise<Booking>
 //   declineJob(bookingID: string): Promise<Booking>
 //   finishSession(bookingID: string): Promise<void>
+import { User } from './User'
+import { Listing } from './Listing'
+
+export interface PetMinder extends User {
+  experience: string
+  animal_tags: string[]
+  pricing_rate: number | null
+  ratings: number
+  certification_urls: string[]
+  certification_titles: string[]
+  listings?: Listing[]
+}
