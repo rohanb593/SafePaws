@@ -3,6 +3,9 @@
 // minder_id    = the user who accepted the booking (acting as minder)
 // Both fields FK → profiles.id — any user can be on either side.
 
+import { Pet } from './Pet'
+import { User } from './User'
+
 export type BookingStatus = 'pending' | 'confirmed' | 'cancelled' | 'completed'
 
 export interface Booking {
@@ -17,6 +20,12 @@ export interface Booking {
   is_recurring: boolean
   recurring_schedule: string | null
   created_at: string
+}
+
+export interface BookingWithDetails extends Booking {
+  pet?: Pet
+  minder?: User
+  requester?: User
 }
 
 export interface BookingDetails {
