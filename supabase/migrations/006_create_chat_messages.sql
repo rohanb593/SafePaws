@@ -13,3 +13,29 @@
 --   DELETE: only sender
 --
 -- Satisfies: RQ13
+CREATE TABLE public.chat_messages (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  sender_id uuid NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  receiver_id uuid NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  message text NOT NULL,
+  read_status boolean NOT NULL DEFAULT false,
+  thread_id text NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+ALTER TABLE public.chat_messages ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Sender and receiver can read messages"
+  ON public.chat_messages FOR SELECT
+  TO authenticated
+  USING (auth.uid() = sender_id OR auth.uid() = receiver_id);
+
+CREATE POLICY "Sender can insert messages"
+  ON public.chat_messages FOR INSERT
+  TO authenticated
+  WITH CHECK (auth.uid() = sender_id);
+
+CREATE POLICY "Receiver can update read status"
+  ON public.chat_messages FOR UPDATE
+  TO authenticated
+  USING (auth.uid() = receiver_id);
