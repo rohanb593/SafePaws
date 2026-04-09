@@ -1,12 +1,5 @@
-// Centered loading spinner component
-//
-// Props:
-//   size?: 'small' | 'large'
-//   color?: string
-//
-// Renders a centred ActivityIndicator
 import React from 'react'
-import { View, ActivityIndicator, StyleSheet } from 'react-native'
+import { ActivityIndicator, StyleSheet, View } from 'react-native'
 
 interface LoadingSpinnerProps {
   size?: 'small' | 'large'
@@ -16,23 +9,17 @@ interface LoadingSpinnerProps {
 
 export default function LoadingSpinner({
   size = 'large',
-  color = '#4CAF50',
+  color = '#2E7D32',
   fullScreen = false,
 }: LoadingSpinnerProps) {
-  if (fullScreen) {
-    return (
-      <View style={styles.fullScreen}>
-        <ActivityIndicator size={size} color={color} />
-      </View>
-    )
-  }
-  return <ActivityIndicator size={size} color={color} />
+  return (
+    <View style={[styles.container, fullScreen && styles.fullScreen]}>
+      <ActivityIndicator size={size} color={color} />
+    </View>
+  )
 }
 
 const styles = StyleSheet.create({
-  fullScreen: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  container: { justifyContent: 'center', alignItems: 'center', padding: 20 },
+  fullScreen: { flex: 1 },
 })

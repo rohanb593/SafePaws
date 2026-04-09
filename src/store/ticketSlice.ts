@@ -1,14 +1,5 @@
-// Ticket Redux slice
-//
-// State:
-//   tickets: Ticket[]
-//   selectedTicket: Ticket | null
-//   loading: boolean
-//   error: string | null
-//
-// Actions: setTickets, setSelectedTicket, addTicket, updateTicket
 import { createSlice, PayloadAction } from '@reduxjs/toolkit'
-import { Ticket, TicketStatus } from '../types/Ticket'
+import { Ticket } from '../types/Ticket'
 
 interface TicketState {
   tickets: Ticket[]
@@ -30,6 +21,7 @@ const ticketSlice = createSlice({
   reducers: {
     setTickets(state, action: PayloadAction<Ticket[]>) {
       state.tickets = action.payload
+      state.loading = false
     },
     setSelectedTicket(state, action: PayloadAction<Ticket | null>) {
       state.selectedTicket = action.payload
@@ -37,9 +29,14 @@ const ticketSlice = createSlice({
     addTicket(state, action: PayloadAction<Ticket>) {
       state.tickets.unshift(action.payload)
     },
-    updateTicket(state, action: PayloadAction<{ id: string; status: TicketStatus }>) {
-      const ticket = state.tickets.find(t => t.id === action.payload.id)
-      if (ticket) ticket.status = action.payload.status
+    updateTicket(state, action: PayloadAction<Partial<Ticket> & { id: string }>) {
+      const idx = state.tickets.findIndex((t) => t.id === action.payload.id)
+      if (idx !== -1) {
+        state.tickets[idx] = { ...state.tickets[idx], ...action.payload }
+      }
+      if (state.selectedTicket?.id === action.payload.id) {
+        state.selectedTicket = { ...state.selectedTicket, ...action.payload }
+      }
     },
     setLoading(state, action: PayloadAction<boolean>) {
       state.loading = action.payload
@@ -50,13 +47,6 @@ const ticketSlice = createSlice({
   },
 })
 
-export const {
-  setTickets,
-  setSelectedTicket,
-  addTicket,
-  updateTicket,
-  setLoading,
-  setError,
-} = ticketSlice.actions
-
+export const { setTickets, setSelectedTicket, addTicket, updateTicket, setLoading, setError } =
+  ticketSlice.actions
 export default ticketSlice.reducer

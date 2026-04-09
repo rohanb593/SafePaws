@@ -1,25 +1,8 @@
-// Support Ticket (RQ37, RQ42)
-//
-// Table: tickets
-// Columns:
-//   id: string (uuid, primary key)
-//   query_type: string
-//   status: 'pending' | 'opened' | 'closed'    (auto-set to pending on insert, RQ42)
-//   priority: 'low' | 'medium' | 'high'
-//   by_user: string (uuid, FK → profiles.id)
-//   category: 'general' | 'booking' | 'payment' | 'account' | 'safety'
-//   issue_description: string
-//   created_at: string
-//   updated_at: string
-//
-// RLS: creator can read their own; admin/customer_support can read all
-//
-// Exports: TicketStatus type, TicketCategory type, TicketPriority type,
-//          Ticket interface, NewTicketInput interface
 export type TicketStatus = 'pending' | 'opened' | 'closed'
-export type TicketPriority = 'low' | 'medium' | 'high'
-// Matches the live Supabase ticket_category ENUM (resources/schema.sql default: 'general').
+
 export type TicketCategory = 'general' | 'booking' | 'payment' | 'account' | 'safety'
+
+export type TicketPriority = 'low' | 'medium' | 'high'
 
 export interface Ticket {
   id: string
@@ -35,8 +18,8 @@ export interface Ticket {
 
 export interface NewTicketInput {
   query_type: string
-  priority: TicketPriority
-  by_user: string
   category: TicketCategory
   issue_description: string
+  by_user: string
+  priority: TicketPriority
 }

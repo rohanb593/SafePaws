@@ -1,27 +1,70 @@
-// Tickets hook — wraps Supabase queries implementing TicketManager logic
-// (RQ37, RQ38, RQ39, RQ40, RQ42, RQ43, RQ44)
-//
-// Exports:
-//   tickets: Ticket[]
-//   selectedTicket: Ticket | null
-//   loading: boolean
-//   error: string | null
-//
-//   fetchTickets(): Promise<void>
-//     → Admin: supabase.from('tickets').select('*')
-//     → CustomerSupport: supabase.from('tickets').select('*').neq('category', 'technical')  (RQ40)
-//     → User: supabase.from('tickets').select('*').eq('by_user', uid)
-//
-//   createTicket(input: NewTicketInput): Promise<void>
-//     → supabase.from('tickets').insert({ ...input, by_user: uid, status: 'pending' })  (RQ42)
-//     → supabase.functions.invoke('notify-support', { ticketID })
-//
-//   updateStatus(ticketID: string, status: TicketStatus): Promise<void>
-//     → supabase.from('tickets').update({ status, updated_at: now() }).eq('id', ticketID)
-//     → if status === 'closed': also close chat thread (RQ44)
-//
-//   filterByPriority(order: 'asc' | 'desc'): Promise<void>
-//     → supabase.from('tickets').select('*').order('priority', { ascending: order === 'asc' })  (RQ39)
-//
-//   filterByCategory(category: TicketCategory): Promise<void>
-//     → supabase.from('tickets').select('*').eq('category', category)
+import { supabase } from '../lib/supabase'
+import { Ticket, NewTicketInput, TicketStatus } from '../types/Ticket'
+import { setTickets, addTicket, updateTicket } from '../store/ticketSlice'
+import type { AppDispatch } from '../store'
+
+export async function fetchUserTickets(
+  dispatch: AppDispatch,
+  userId: string
+): Promise<void> {
+  const { data, error } = await supabase
+    .from('tickets')
+    .select('*')
+    .eq('by_user', userId)
+    .order('created_at', { ascending: false })
+
+  if (error) {
+    console.warn('[useTickets] fetchUserTickets', error.message)
+    return
+  }
+  dispatch(setTickets((data ?? []) as Ticket[]))
+}
+
+export async function fetchAllTickets(dispatch: AppDispatch): Promise<void> {
+  const { data, error } = await supabase
+    .from('tickets')
+    .select('*, user:by_user(display_name, email)')
+    .order('created_at', { ascending: false })
+
+  if (error) {
+    console.warn('[useTickets] fetchAllTickets', error.message)
+    return
+  }
+  dispatch(setTickets((data ?? []) as Ticket[]))
+}
+
+export async function createTicket(
+  dispatch: AppDispatch,
+  ticket: NewTicketInput
+): Promise<Ticket | null> {
+  const { data, error } = await supabase
+    .from('tickets')
+    .insert({ ...ticket, status: 'pending' })
+    .select()
+    .single()
+
+  if (error) {
+    console.warn('[useTickets] createTicket', error.message)
+    return null
+  }
+  const created = data as Ticket
+  dispatch(addTicket(created))
+  return created
+}
+
+export async function updateTicketStatus(
+  dispatch: AppDispatch,
+  ticketId: string,
+  status: TicketStatus
+): Promise<void> {
+  const { error } = await supabase
+    .from('tickets')
+    .update({ status, updated_at: new Date().toISOString() })
+    .eq('id', ticketId)
+
+  if (error) {
+    console.warn('[useTickets] updateTicketStatus', error.message)
+    return
+  }
+  dispatch(updateTicket({ id: ticketId, status }))
+}

@@ -6,6 +6,8 @@ import {
   NavigationContainer,
   NavigationIndependentTree,
 } from '@react-navigation/native'
+import { createNativeStackNavigator } from '@react-navigation/native-stack'
+import type { NativeStackScreenProps } from '@react-navigation/native-stack'
 import { useDispatch, useSelector } from 'react-redux'
 import { supabase } from '../lib/supabase'
 import { setUser, logout } from '../store/authSlice'
@@ -13,10 +15,16 @@ import { RootState } from '../store'
 import AuthNavigator from './AuthNavigator'
 import { useAuth } from '../hooks/useAuth'
 import { User } from '../types/User'
+export type AppStackParamList = {
+  Home: undefined
+}
 
-function PlaceholderHome() {
+const Stack = createNativeStackNavigator<AppStackParamList>()
+
+function HomeScreen(_props: NativeStackScreenProps<AppStackParamList, 'Home'>) {
   const user = useSelector((state: RootState) => state.auth.user)
   const { logout: signOut } = useAuth()
+
   return (
     <View style={styles.center}>
       <Text style={styles.welcome}>Welcome, {user?.display_name || user?.username}!</Text>
@@ -24,6 +32,14 @@ function PlaceholderHome() {
         <Text style={styles.logoutText}>Log Out</Text>
       </TouchableOpacity>
     </View>
+  )
+}
+
+function AuthenticatedStack() {
+  return (
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="Home" component={HomeScreen} />
+    </Stack.Navigator>
   )
 }
 
@@ -67,15 +83,15 @@ export default function AppNavigator() {
   return (
     <NavigationIndependentTree>
       <NavigationContainer>
-        {isAuthenticated ? <PlaceholderHome /> : <AuthNavigator />}
+        {isAuthenticated ? <AuthenticatedStack /> : <AuthNavigator />}
       </NavigationContainer>
     </NavigationIndependentTree>
   )
 }
 
 const styles = StyleSheet.create({
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f9f9f9' },
-  welcome: { fontSize: 22, fontWeight: 'bold', color: '#2E7D32', marginBottom: 32 },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f9f9f9', paddingHorizontal: 24 },
+  welcome: { fontSize: 22, fontWeight: 'bold', color: '#2E7D32', marginBottom: 24, textAlign: 'center' },
   logoutBtn: { backgroundColor: '#c0392b', paddingVertical: 12, paddingHorizontal: 24, borderRadius: 8 },
   logoutText: { color: '#fff', fontWeight: '600', fontSize: 16 },
 })
