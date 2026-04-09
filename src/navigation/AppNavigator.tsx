@@ -15,28 +15,19 @@ import { RootState } from '../store'
 import AuthNavigator from './AuthNavigator'
 import { useAuth } from '../hooks/useAuth'
 import { User } from '../types/User'
-import MapDemoScreen from '../screens/shared/MapDemoScreen'
-
 export type AppStackParamList = {
   Home: undefined
-  MapDemo: undefined
 }
 
 const Stack = createNativeStackNavigator<AppStackParamList>()
 
-function HomeScreen({ navigation }: NativeStackScreenProps<AppStackParamList, 'Home'>) {
+function HomeScreen(_props: NativeStackScreenProps<AppStackParamList, 'Home'>) {
   const user = useSelector((state: RootState) => state.auth.user)
   const { logout: signOut } = useAuth()
+
   return (
     <View style={styles.center}>
       <Text style={styles.welcome}>Welcome, {user?.display_name || user?.username}!</Text>
-      <TouchableOpacity
-        onPress={() => navigation.navigate('MapDemo')}
-        style={styles.mapBtn}
-        activeOpacity={0.85}
-      >
-        <Text style={styles.mapBtnText}>View map</Text>
-      </TouchableOpacity>
       <TouchableOpacity onPress={signOut} style={styles.logoutBtn}>
         <Text style={styles.logoutText}>Log Out</Text>
       </TouchableOpacity>
@@ -48,7 +39,6 @@ function AuthenticatedStack() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="Home" component={HomeScreen} />
-      <Stack.Screen name="MapDemo" component={MapDemoScreen} />
     </Stack.Navigator>
   )
 }
@@ -102,16 +92,6 @@ export default function AppNavigator() {
 const styles = StyleSheet.create({
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f9f9f9', paddingHorizontal: 24 },
   welcome: { fontSize: 22, fontWeight: 'bold', color: '#2E7D32', marginBottom: 24, textAlign: 'center' },
-  mapBtn: {
-    backgroundColor: '#2E7D32',
-    paddingVertical: 14,
-    paddingHorizontal: 28,
-    borderRadius: 10,
-    marginBottom: 16,
-    minWidth: 200,
-    alignItems: 'center',
-  },
-  mapBtnText: { color: '#fff', fontWeight: '700', fontSize: 17 },
   logoutBtn: { backgroundColor: '#c0392b', paddingVertical: 12, paddingHorizontal: 24, borderRadius: 8 },
   logoutText: { color: '#fff', fontWeight: '600', fontSize: 16 },
 })

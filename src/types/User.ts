@@ -11,7 +11,7 @@ export interface User {
   email: string
   phone: string | null
   preferred_communication: 'in-app' | 'email' | 'phone'
-  role: 'user' | 'admin' | 'customer_support'
+  role: 'user' | 'minder' | 'admin' | 'customer_support'
   account_status: 'active' | 'suspended' | 'banned'
   vet_clinic_name: string | null
   vet_clinic_phone: string | null
