@@ -8,7 +8,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native'
-import { useNavigation } from '@react-navigation/native'
+import { useNavigation, type NavigationProp, type ParamListBase } from '@react-navigation/native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useSelector } from 'react-redux'
 
@@ -32,7 +32,7 @@ function StatCard({ label, value }: { label: string; value: number | null }) {
 }
 
 export default function AdminDashboardScreen() {
-  const navigation = useNavigation()
+  const navigation = useNavigation<NavigationProp<ParamListBase>>()
   const currentUser = useSelector((state: RootState) => state.auth.user)
   const [stats, setStats] = useState<Stats | null>(null)
   const [loading, setLoading] = useState(true)
@@ -91,14 +91,14 @@ export default function AdminDashboardScreen() {
 
         <TouchableOpacity
           style={styles.actionBtn}
-          onPress={() => navigation.navigate('TicketQueue' as never)}
+          onPress={() => navigation.navigate('TicketQueue')}
         >
           <Text style={styles.actionBtnText}>🎫  View Ticket Queue</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
           style={styles.actionBtn}
-          onPress={() => navigation.navigate('UserManagement' as never)}
+          onPress={() => navigation.navigate('UserManagement')}
         >
           <Text style={styles.actionBtnText}>👥  Manage Users</Text>
         </TouchableOpacity>

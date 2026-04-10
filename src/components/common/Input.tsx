@@ -7,6 +7,7 @@ import {
   TextInput,
   StyleSheet,
   type KeyboardTypeOptions,
+  type ReturnKeyTypeOptions,
 } from 'react-native'
 
 interface InputProps {
@@ -19,6 +20,9 @@ interface InputProps {
   multiline?: boolean
   keyboardType?: KeyboardTypeOptions
   maxLength?: number
+  onSubmitEditing?: () => void
+  returnKeyType?: ReturnKeyTypeOptions
+  blurOnSubmit?: boolean
 }
 
 export default function Input({
@@ -31,6 +35,9 @@ export default function Input({
   multiline,
   keyboardType,
   maxLength,
+  onSubmitEditing,
+  returnKeyType,
+  blurOnSubmit,
 }: InputProps) {
   return (
     <View style={styles.container}>
@@ -45,6 +52,9 @@ export default function Input({
         keyboardType={keyboardType}
         maxLength={maxLength}
         autoCapitalize="none"
+        onSubmitEditing={onSubmitEditing}
+        returnKeyType={returnKeyType}
+        blurOnSubmit={blurOnSubmit}
       />
       {error ? <Text style={styles.error}>{error}</Text> : null}
     </View>

@@ -51,9 +51,6 @@ const bookingSlice = createSlice({
       const application = state.applications.find(a => a.id === action.payload.id)
       if (application) application.status = action.payload.status
     },
-    setSelectedBooking(state, action: PayloadAction<Booking | null>) {
-      state.selectedBooking = action.payload
-    },
     setLoading(state, action: PayloadAction<boolean>) {
       state.loading = action.payload
     },
