@@ -1,4 +1,4 @@
-import { useRoute, useNavigation } from '@react-navigation/native'
+import { useRoute, useNavigation, type NavigationProp, type ParamListBase } from '@react-navigation/native'
 import { useState, useEffect, useCallback } from 'react'
 import { ScrollView, View, Text, Alert, StyleSheet } from 'react-native'
 import { useDispatch } from 'react-redux'
@@ -21,7 +21,7 @@ interface RouteParams {
 
 export default function BookingDetailsScreen() {
   const route = useRoute()
-  const navigation = useNavigation()
+  const navigation = useNavigation<NavigationProp<ParamListBase>>()
   const dispatch = useDispatch<AppDispatch>()
   const { bookingId } = route.params as RouteParams
 
@@ -155,20 +155,15 @@ export default function BookingDetailsScreen() {
           <>
             <Button
               label="Track pet location"
-              onPress={() =>
-                navigation.navigate('GPSTracking' as never, { bookingId } as never)
-              }
+              onPress={() => navigation.navigate('GPSTracking', { bookingId })}
             />
             <Button
               label="Message minder"
               onPress={() =>
-                navigation.navigate(
-                  'Chat' as never,
-                  {
-                    threadId: `${booking.requester_id}_${booking.minder_id}`,
-                    otherUserId: booking.minder_id,
-                  } as never
-                )
+                navigation.navigate('Chat', {
+                  threadId: `${booking.requester_id}_${booking.minder_id}`,
+                  otherUserId: booking.minder_id,
+                })
               }
             />
             <Button label="Cancel booking" onPress={handleCancel} variant="danger" />
@@ -179,13 +174,10 @@ export default function BookingDetailsScreen() {
           <Button
             label="Leave review"
             onPress={() =>
-              navigation.navigate(
-                'LeaveReview' as never,
-                {
-                  bookingId,
-                  revieweeId: minder?.id,
-                } as never
-              )
+              navigation.navigate('LeaveReview', {
+                bookingId,
+                revieweeId: minder?.id,
+              })
             }
           />
         ) : null}

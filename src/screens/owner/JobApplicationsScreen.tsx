@@ -1,7 +1,12 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Alert, FlatList, RefreshControl, StyleSheet, Text, View } from 'react-native'
 import { useDispatch, useSelector } from 'react-redux'
-import { useNavigation, useRoute } from '@react-navigation/native'
+import {
+  useNavigation,
+  useRoute,
+  type NavigationProp,
+  type ParamListBase,
+} from '@react-navigation/native'
 import { AppDispatch, RootState } from '@/src/store'
 import Card from '@/src/components/common/Card'
 import Button from '@/src/components/common/Button'
@@ -20,7 +25,7 @@ interface RouteParams {
 
 export default function JobApplicationsScreen() {
   const dispatch = useDispatch<AppDispatch>()
-  const navigation = useNavigation()
+  const navigation = useNavigation<NavigationProp<ParamListBase>>()
   const route = useRoute()
   const { listingId } = (route.params as RouteParams) || {}
   const user = useSelector((s: RootState) => s.auth.user)
@@ -59,11 +64,7 @@ export default function JobApplicationsScreen() {
             Alert.alert('Booking created', 'The minder is now booked.', [
               {
                 text: 'Open Booking',
-                onPress: () =>
-                  navigation.navigate(
-                    'BookingDetails' as never,
-                    { bookingId: booking.id } as never
-                  ),
+                onPress: () => navigation.navigate('BookingDetails', { bookingId: booking.id }),
               },
               { text: 'OK' },
             ])
@@ -102,10 +103,10 @@ export default function JobApplicationsScreen() {
           onAccept={onAccept}
           onReject={onReject}
           onMessage={minderId =>
-            navigation.navigate(
-              'Chat' as never,
-              { threadId: `${user?.id}_${minderId}`, otherUserId: minderId } as never
-            )
+            navigation.navigate('Chat', {
+              threadId: `${user?.id}_${minderId}`,
+              otherUserId: minderId,
+            })
           }
         />
       )}
