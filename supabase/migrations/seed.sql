@@ -125,32 +125,32 @@ ON CONFLICT (id) DO NOTHING;
 
 -- ─── Listings ─────────────────────────────────────────────────────────────────
 INSERT INTO public.listings (
-  id, user_id, location, description, listing_type,
-  animal, time, price, rating, created_at
+  id, user_id, location, postcode, description,
+  animal, availability, time, price, rating, created_at
 )
 VALUES
-  -- Bob's minder listing
   (
     '00000000-0000-0000-0003-000000000001',
     '00000000-0000-0000-0000-000000000002',
     'London, UK',
+    'SW1A 1AA',
     'Experienced dog and cat minder. Available weekends and evenings.',
-    'minder_listing',
     'Dog, Cat',
-    'Weekends 9am–6pm',
+    '{"days":["Sat","Sun"],"startTime":"09:00","endTime":"18:00"}'::jsonb,
+    'Sat, Sun · 09:00–18:00',
     15.00,
     4.7,
     now() - interval '55 days'
   ),
-  -- Alice's owner listing
   (
     '00000000-0000-0000-0003-000000000002',
     '00000000-0000-0000-0000-000000000001',
     'London, UK',
+    'E1 6AN',
     'Looking for a reliable minder for my Labrador, Buddy, 2–3 times a week.',
-    'owner_listing',
     'Dog',
-    'Mon/Wed/Fri afternoons',
+    '{"days":["Mon","Wed","Fri"],"startTime":"12:00","endTime":"17:00"}'::jsonb,
+    'Mon, Wed, Fri · 12:00–17:00',
     NULL,
     NULL,
     now() - interval '5 days'
@@ -158,7 +158,7 @@ VALUES
 ON CONFLICT (id) DO NOTHING;
 
 -- ─── Chat messages ────────────────────────────────────────────────────────────
--- Thread ID is the booking ID so it groups naturally.
+-- Thread ID matches app helper dmThreadId(owner_id, minder_id) — sorted UUID pair.
 INSERT INTO public.chat_messages (
   id, sender_id, receiver_id, message, read_status, thread_id, created_at
 )
@@ -169,7 +169,7 @@ VALUES
     '00000000-0000-0000-0000-000000000002',  -- Bob
     'Hi Bob, looking forward to the session with Buddy!',
     true,
-    '00000000-0000-0000-0002-000000000001',
+    '00000000-0000-0000-0000-000000000001_00000000-0000-0000-0000-000000000002',
     now() - interval '12 hours'
   ),
   (
@@ -178,7 +178,7 @@ VALUES
     '00000000-0000-0000-0000-000000000001',  -- Alice
     'Thanks Alice! I''ll be there at 10am sharp. Any special instructions?',
     true,
-    '00000000-0000-0000-0002-000000000001',
+    '00000000-0000-0000-0000-000000000001_00000000-0000-0000-0000-000000000002',
     now() - interval '11 hours'
   ),
   (
@@ -187,7 +187,7 @@ VALUES
     '00000000-0000-0000-0000-000000000002',  -- Bob
     'Just make sure he gets his walk before noon. He loves the park!',
     false,
-    '00000000-0000-0000-0002-000000000001',
+    '00000000-0000-0000-0000-000000000001_00000000-0000-0000-0000-000000000002',
     now() - interval '10 hours'
   )
 ON CONFLICT (id) DO NOTHING;

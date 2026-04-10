@@ -1,19 +1,21 @@
-// Listing (RQ33, RQ34, RQ35, RQ36)
-// Any user can post either listing type — owner_listing to find a minder,
-// minder_listing to advertise minding services.
+// Listing — maps to Supabase `listings` (RQ33–RQ36)
+
+import type { ListingAvailability } from './availability'
 
 export interface Listing {
   id: string
   user_id: string
   location: string
+  /** Used for Find a Pet Minder search filter (separate from free-text location). */
+  postcode?: string
   description: string
-  listing_type: 'owner_listing' | 'minder_listing'
   animal: string | null
+  /** Structured weekly hours; `time` is a legacy summary string for older rows. */
+  availability?: ListingAvailability | null
   time: string | null
   price: number | null
   rating: number | null
   created_at: string
+  /** Set client-side when sorting search results by distance to a filter postcode. */
+  distanceKm?: number
 }
-
-export type OwnerListing = Listing & { listing_type: 'owner_listing'; animal: string; time: string }
-export type MinderListing = Listing & { listing_type: 'minder_listing'; price: number; rating: number }

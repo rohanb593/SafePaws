@@ -22,9 +22,11 @@ import LoadingSpinner from '../../components/common/LoadingSpinner'
 import Rating from '../../components/common/Rating'
 import { supabase } from '../../lib/supabase'
 import { RootState } from '../../store'
+import { formatListingAvailabilityDisplay } from '../../types/availability'
 import { Listing } from '../../types/Listing'
 import { Review } from '../../types/Review'
 import { User } from '../../types/User'
+import { dmThreadId } from '../../utils/threadId'
 
 interface ReviewWithReviewer extends Review {
   reviewer?: { display_name: string; username: string } | null
@@ -41,8 +43,8 @@ export default function MinderProfileScreen({ navigation, route }: any) {
   const [isFavourited, setIsFavourited] = useState(false)
 
   const threadId = useMemo(() => {
-    if (!currentUserId) return ''
-    return [currentUserId, minderId].sort().join('_')
+    if (!currentUserId || !minderId) return ''
+    return dmThreadId(currentUserId, minderId)
   }, [currentUserId, minderId])
 
   useEffect(() => {
@@ -55,7 +57,8 @@ export default function MinderProfileScreen({ navigation, route }: any) {
           .from('listings')
           .select('*')
           .eq('user_id', minderId)
-          .eq('listing_type', 'minder_listing')
+          .order('created_at', { ascending: false })
+          .limit(1)
           .maybeSingle(),
         supabase
           .from('reviews')
@@ -135,7 +138,9 @@ export default function MinderProfileScreen({ navigation, route }: any) {
           <Text style={styles.sectionTitle}>Listing Details</Text>
           <Text style={styles.bodyText}>Animals: {listing.animal || 'Any'}</Text>
           <Text style={styles.bodyText}>Price: {listing.price ? `£${listing.price} / hr` : 'Not set'}</Text>
-          <Text style={styles.bodyText}>Availability: {listing.time || 'Not set'}</Text>
+          <Text style={styles.bodyText}>
+            Availability: {formatListingAvailabilityDisplay(listing)}
+          </Text>
           <Text style={styles.bodyText}>{listing.description || 'No description'}</Text>
         </Card>
       ) : null}

@@ -7,6 +7,8 @@ import MinderDashboardScreen from '../screens/minder/MinderDashboardScreen'
 import JobRequestsScreen from '../screens/minder/JobRequestsScreen'
 import AvailabilityScreen from '../screens/minder/AvailabilityScreen'
 import ProfileScreen from '../screens/shared/ProfileScreen'
+import ChatsListScreen from '../screens/shared/ChatsListScreen'
+import ListingsScreen from '../screens/shared/ListingsScreen'
 import JobDetailsScreen from '../screens/minder/JobDetailsScreen'
 import SessionScreen from '../screens/minder/SessionScreen'
 import MinderProfileEditScreen from '../screens/minder/MinderProfileEditScreen'
@@ -17,11 +19,13 @@ export type MinderTabParamList = {
   Dashboard: undefined
   Jobs: undefined
   Availability: undefined
-  Profile: undefined
+  Listings: undefined
+  Chats: undefined
 }
 
 export type MinderStackParamList = {
   MinderTabs: undefined
+  Profile: undefined
   JobDetails: { bookingId: string }
   Session: { bookingId: string }
   MinderProfileEdit: undefined
@@ -42,7 +46,8 @@ function MinderTabs() {
 
           if (route.name === 'Jobs') iconName = 'work'
           if (route.name === 'Availability') iconName = 'calendar-month'
-          if (route.name === 'Profile') iconName = 'person'
+          if (route.name === 'Listings') iconName = 'list'
+          if (route.name === 'Chats') iconName = 'chat'
 
           return <Icon name={iconName} size={size} color={color} />
         },
@@ -51,7 +56,8 @@ function MinderTabs() {
       <Tab.Screen name="Dashboard" component={MinderDashboardScreen} />
       <Tab.Screen name="Jobs" component={JobRequestsScreen} />
       <Tab.Screen name="Availability" component={AvailabilityScreen} />
-      <Tab.Screen name="Profile" component={ProfileScreen} />
+      <Tab.Screen name="Listings" component={ListingsScreen} />
+      <Tab.Screen name="Chats" component={ChatsListScreen} options={{ title: 'Messages' }} />
     </Tab.Navigator>
   )
 }
@@ -60,6 +66,7 @@ export default function MinderNavigator() {
   return (
     <Stack.Navigator>
       <Stack.Screen name="MinderTabs" component={MinderTabs} options={{ headerShown: false }} />
+      <Stack.Screen name="Profile" component={ProfileScreen} options={{ title: 'Profile' }} />
       <Stack.Screen name="JobDetails" component={JobDetailsScreen} />
       <Stack.Screen name="Session" component={SessionScreen} />
       <Stack.Screen name="MinderProfileEdit" component={MinderProfileEditScreen} />

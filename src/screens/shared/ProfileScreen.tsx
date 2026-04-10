@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { ScrollView, StyleSheet, Text, View } from 'react-native'
+import { SafeAreaView } from 'react-native-safe-area-context'
 import { useSelector } from 'react-redux'
 
 import type { RootState } from '../../store'
@@ -132,91 +133,97 @@ export default function ProfileScreen() {
 
   if (error && !profile) {
     return (
-      <View style={styles.center}>
-        <Text style={styles.errorText}>{error}</Text>
-      </View>
+      <SafeAreaView style={styles.safe} edges={['left', 'right', 'bottom']}>
+        <View style={styles.center}>
+          <Text style={styles.errorText}>{error}</Text>
+        </View>
+      </SafeAreaView>
     )
   }
 
   if (!profile) {
     return (
-      <View style={styles.center}>
-        <Text style={styles.errorText}>Profile not found.</Text>
-      </View>
+      <SafeAreaView style={styles.safe} edges={['left', 'right', 'bottom']}>
+        <View style={styles.center}>
+          <Text style={styles.errorText}>Profile not found.</Text>
+        </View>
+      </SafeAreaView>
     )
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <View style={styles.header}>
-        <Avatar name={profile.display_name || profile.username || '?'} size={84} />
-        <Text style={styles.name}>{profile.display_name}</Text>
-        <Text style={styles.username}>@{profile.username}</Text>
-      </View>
+    <SafeAreaView style={styles.safe} edges={['left', 'right', 'bottom']}>
+      <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
+        <View style={styles.header}>
+          <Avatar name={profile.display_name || profile.username || '?'} size={84} />
+          <Text style={styles.name}>{profile.display_name}</Text>
+          <Text style={styles.username}>@{profile.username}</Text>
+        </View>
 
-      {editing ? (
-        <View style={styles.card}>
-          <Input
-            label="Display Name"
-            value={form.display_name}
-            onChangeText={(value) => updateField('display_name', value)}
-            placeholder="Your display name"
-          />
-          <Input
-            label="Phone"
-            value={form.phone}
-            onChangeText={(value) => updateField('phone', value)}
-            placeholder="Phone number"
-            keyboardType="phone-pad"
-          />
-          <Input
-            label="Location"
-            value={form.location}
-            onChangeText={(value) => updateField('location', value)}
-            placeholder="Your location"
-          />
-          <Input
-            label="Preferences"
-            value={form.preferences}
-            onChangeText={(value) => updateField('preferences', value)}
-            placeholder="Communication and care preferences"
-            multiline
-          />
-          {isMinder ? (
+        {editing ? (
+          <View style={styles.card}>
             <Input
-              label="Experience"
-              value={form.experience}
-              onChangeText={(value) => updateField('experience', value)}
-              placeholder="Describe your pet care experience"
+              label="Display Name"
+              value={form.display_name}
+              onChangeText={(value) => updateField('display_name', value)}
+              placeholder="Your display name"
+            />
+            <Input
+              label="Phone"
+              value={form.phone}
+              onChangeText={(value) => updateField('phone', value)}
+              placeholder="Phone number"
+              keyboardType="phone-pad"
+            />
+            <Input
+              label="Location"
+              value={form.location}
+              onChangeText={(value) => updateField('location', value)}
+              placeholder="Your location"
+            />
+            <Input
+              label="Preferences"
+              value={form.preferences}
+              onChangeText={(value) => updateField('preferences', value)}
+              placeholder="Communication and care preferences"
               multiline
             />
-          ) : null}
+            {isMinder ? (
+              <Input
+                label="Experience"
+                value={form.experience}
+                onChangeText={(value) => updateField('experience', value)}
+                placeholder="Describe your pet care experience"
+                multiline
+              />
+            ) : null}
 
-          {error ? <Text style={styles.errorText}>{error}</Text> : null}
+            {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
-          <Button label="Save" onPress={onSave} loading={saving} />
-          <Button label="Cancel" onPress={onCancel} variant="secondary" disabled={saving} />
-        </View>
-      ) : (
-        <View style={styles.card}>
-          <Row label="Display Name" value={profile.display_name} />
-          <Row label="Username" value={profile.username} />
-          <Row label="Email" value={profile.email} />
-          <Row label="Phone" value={profile.phone ?? '—'} />
-          <Row label="Location" value={profile.location || '—'} />
-          <Row label="Preferred Communication" value={profile.preferred_communication || '—'} />
-          {isMinder ? <Row label="Experience" value={profile.experience ?? '—'} /> : null}
-
-          <View style={styles.row}>
-            <Text style={styles.label}>Ratings</Text>
-            <Rating value={profile.ratings ?? 0} />
+            <Button label="Save" onPress={onSave} loading={saving} />
+            <Button label="Cancel" onPress={onCancel} variant="secondary" disabled={saving} />
           </View>
+        ) : (
+          <View style={styles.card}>
+            <Row label="Display Name" value={profile.display_name} />
+            <Row label="Username" value={profile.username} />
+            <Row label="Email" value={profile.email} />
+            <Row label="Phone" value={profile.phone ?? '—'} />
+            <Row label="Location" value={profile.location || '—'} />
+            <Row label="Preferred Communication" value={profile.preferred_communication || '—'} />
+            {isMinder ? <Row label="Experience" value={profile.experience ?? '—'} /> : null}
 
-          {error ? <Text style={styles.errorText}>{error}</Text> : null}
-          <Button label="Edit" onPress={onEdit} />
-        </View>
-      )}
-    </ScrollView>
+            <View style={styles.row}>
+              <Text style={styles.label}>Ratings</Text>
+              <Rating value={profile.ratings ?? 0} />
+            </View>
+
+            {error ? <Text style={styles.errorText}>{error}</Text> : null}
+            <Button label="Edit" onPress={onEdit} />
+          </View>
+        )}
+      </ScrollView>
+    </SafeAreaView>
   )
 }
 
@@ -230,8 +237,10 @@ function Row({ label, value }: { label: string; value: string | null }) {
 }
 
 const styles = StyleSheet.create({
+  safe: { flex: 1, backgroundColor: '#f6f8f7' },
   container: {
     padding: 20,
+    paddingTop: 12,
     backgroundColor: '#f6f8f7',
     flexGrow: 1,
   },

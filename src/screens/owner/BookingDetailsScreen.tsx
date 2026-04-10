@@ -14,6 +14,7 @@ import BookingCard from '@/src/components/booking/BookingCard'
 import BookingStatusBadge from '@/src/components/booking/BookingStatusBadge'
 import MedicalRecordCard from '@/src/components/pet/MedicalRecordCard'
 import { formatDateTime, formatDuration } from '@/src/utils/formatDate'
+import { dmThreadId } from '@/src/utils/threadId'
 
 interface RouteParams {
   bookingId: string
@@ -161,7 +162,7 @@ export default function BookingDetailsScreen() {
               label="Message minder"
               onPress={() =>
                 navigation.navigate('Chat', {
-                  threadId: `${booking.requester_id}_${booking.minder_id}`,
+                  threadId: dmThreadId(booking.requester_id, booking.minder_id),
                   otherUserId: booking.minder_id,
                 })
               }

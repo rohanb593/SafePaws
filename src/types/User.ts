@@ -20,4 +20,6 @@ export interface User {
   ratings: number             // average rating received as a minder
   pet_info: string            // general pet info as an owner
   created_at: string
+  /** When `role === 'minder'`: which primary UI to show (README AppNavigator). */
+  listing_type?: 'owner' | 'minder' | null
 }

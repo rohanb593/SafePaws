@@ -16,10 +16,32 @@ VALUES
   ('00000000-0000-0000-0000-000000000011', '00000000-0000-0000-0000-000000000001', 'Cat', 'Persian', 'Whiskers', now());
 
 -- Test listings
-INSERT INTO public.listings (id, user_id, location, description, listing_type, animal, time, price, created_at)
+INSERT INTO public.listings (id, user_id, location, postcode, description, animal, availability, time, price, created_at)
 VALUES
-  ('00000000-0000-0000-0000-000000000020', '00000000-0000-0000-0000-000000000002', 'Manchester', 'Experienced minder available for dogs and cats', 'minder_listing', 'Dog', '9am-5pm', 15.00, now()),
-  ('00000000-0000-0000-0000-000000000021', '00000000-0000-0000-0000-000000000001', 'London', 'Looking for a minder for my Labrador', 'owner_listing', 'Dog', 'Weekends', null, now());
+  (
+    '00000000-0000-0000-0000-000000000020',
+    '00000000-0000-0000-0000-000000000002',
+    'Manchester',
+    'M1 1AA',
+    'Experienced minder available for dogs and cats',
+    'Dog',
+    '{"days":["Mon","Tue","Wed","Thu","Fri"],"startTime":"09:00","endTime":"17:00"}'::jsonb,
+    'Mon, Tue, Wed, Thu, Fri · 09:00–17:00',
+    15.00,
+    now()
+  ),
+  (
+    '00000000-0000-0000-0000-000000000021',
+    '00000000-0000-0000-0000-000000000001',
+    'London',
+    'E1 6AN',
+    'Looking for a minder for my Labrador',
+    'Dog',
+    '{"days":["Sat","Sun"],"startTime":"10:00","endTime":"16:00"}'::jsonb,
+    'Sat, Sun · 10:00–16:00',
+    null,
+    now()
+  );
 
 -- Test booking
 INSERT INTO public.bookings (id, pet_id, requester_id, minder_id, location, status, start_time, end_time, is_recurring, created_at)

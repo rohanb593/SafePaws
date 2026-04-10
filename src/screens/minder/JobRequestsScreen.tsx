@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { FlatList, RefreshControl, StyleSheet, Text, View } from 'react-native'
+import { SafeAreaView } from 'react-native-safe-area-context'
 import { useDispatch, useSelector } from 'react-redux'
 import { useNavigation, type NavigationProp, type ParamListBase } from '@react-navigation/native'
 import { AppDispatch, RootState } from '@/src/store'
@@ -52,43 +53,46 @@ export default function JobRequestsScreen() {
   if (loading && bookings.length === 0) return <LoadingSpinner fullScreen />
 
   return (
-    <View style={styles.page}>
-      <FlatList
-        horizontal
-        data={TABS}
-        keyExtractor={item => item.value}
-        contentContainerStyle={styles.tabs}
-        showsHorizontalScrollIndicator={false}
-        renderItem={({ item }) => (
-          <View style={styles.tabBtn}>
-            <Button
-              label={item.label}
-              variant={activeTab === item.value ? 'primary' : 'secondary'}
-              onPress={() => setActiveTab(item.value)}
-            />
-          </View>
-        )}
-      />
+    <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
+      <View style={styles.page}>
+        <FlatList
+          horizontal
+          data={TABS}
+          keyExtractor={item => item.value}
+          contentContainerStyle={styles.tabs}
+          showsHorizontalScrollIndicator={false}
+          renderItem={({ item }) => (
+            <View style={styles.tabBtn}>
+              <Button
+                label={item.label}
+                variant={activeTab === item.value ? 'primary' : 'secondary'}
+                onPress={() => setActiveTab(item.value)}
+              />
+            </View>
+          )}
+        />
 
-      <FlatList
-        data={filtered}
-        keyExtractor={item => item.id}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-        contentContainerStyle={styles.list}
-        ListEmptyComponent={<Text style={styles.empty}>No jobs in this tab.</Text>}
-        renderItem={({ item }) => (
-          <BookingCard
-            booking={item}
-            onPress={() => navigation.navigate('JobDetails', { bookingId: item.id })}
-          />
-        )}
-      />
-    </View>
+        <FlatList
+          data={filtered}
+          keyExtractor={item => item.id}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+          contentContainerStyle={styles.list}
+          ListEmptyComponent={<Text style={styles.empty}>No jobs in this tab.</Text>}
+          renderItem={({ item }) => (
+            <BookingCard
+              booking={item}
+              onPress={() => navigation.navigate('JobDetails', { bookingId: item.id })}
+            />
+          )}
+        />
+      </View>
+    </SafeAreaView>
   )
 }
 
 const styles = StyleSheet.create({
-  page: { flex: 1, backgroundColor: '#fff' },
+  safe: { flex: 1, backgroundColor: '#f8f9fb' },
+  page: { flex: 1, backgroundColor: '#f8f9fb' },
   tabs: { paddingHorizontal: 12, paddingVertical: 10, gap: 8 },
   tabBtn: { width: 122 },
   list: { paddingHorizontal: 12, paddingBottom: 22 },

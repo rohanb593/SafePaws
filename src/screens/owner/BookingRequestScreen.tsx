@@ -75,7 +75,6 @@ export default function BookingRequestScreen() {
         .from('listings')
         .select('price')
         .eq('user_id', minderId)
-        .eq('listing_type', 'minder_listing')
         .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle()

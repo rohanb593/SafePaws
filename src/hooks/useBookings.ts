@@ -195,7 +195,6 @@ export async function fetchOwnerApplications(
       .from('listings')
       .select('id')
       .eq('user_id', ownerId)
-      .eq('listing_type', 'owner_listing')
 
     if (listingError) throw listingError
     const listingIds = ((listingRows as { id: string }[] | null) ?? []).map(l => l.id)

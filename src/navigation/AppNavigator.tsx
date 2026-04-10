@@ -1,12 +1,11 @@
 // Root navigator — listens to Supabase auth state and routes accordingly
 
 import React, { useEffect, useState } from 'react'
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native'
+import { View, StyleSheet, ActivityIndicator } from 'react-native'
 import {
   NavigationContainer,
   NavigationIndependentTree,
 } from '@react-navigation/native'
-import { createNativeStackNavigator } from '@react-navigation/native-stack'
 import { useDispatch, useSelector } from 'react-redux'
 import { supabase } from '../lib/supabase'
 import { setUser, logout } from '../store/authSlice'
@@ -16,11 +15,6 @@ import OwnerNavigator from './OwnerNavigator'
 import MinderNavigator from './MinderNavigator'
 import AdminNavigator from './AdminNavigator'
 import { User } from '../types/User'
-export type AppStackParamList = {
-  Home: undefined
-}
-
-const Stack = createNativeStackNavigator<AppStackParamList>()
 
 export default function AppNavigator() {
   const dispatch = useDispatch()
@@ -47,6 +41,15 @@ export default function AppNavigator() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === 'SIGNED_OUT' || !session) {
         dispatch(logout())
+        return
+      }
+      if (event === 'SIGNED_IN' && session.user) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .single()
+        if (profile) dispatch(setUser(profile as User))
       }
     })
 
@@ -67,8 +70,7 @@ export default function AppNavigator() {
         {isAuthenticated ? (
           role === 'admin' || role === 'customer_support' ? (
             <AdminNavigator />
-          ) : role === 'minder' &&
-            (user as (User & { listing_type?: string }) | null)?.listing_type === 'owner' ? (
+          ) : role === 'minder' && user?.listing_type === 'owner' ? (
             <OwnerNavigator />
           ) : role === 'minder' ? (
             <MinderNavigator />

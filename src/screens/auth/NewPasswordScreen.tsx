@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react'
 import { View, Text, StyleSheet } from 'react-native'
+import { SafeAreaView } from 'react-native-safe-area-context'
 import Input from '../../components/common/Input'
 import Button from '../../components/common/Button'
 import { useAuth } from '../../hooks/useAuth'
@@ -35,32 +36,35 @@ export default function NewPasswordScreen({ navigation }: any) {
   }
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>New Password</Text>
-      <Text style={styles.subtitle}>Choose a new password for your account.</Text>
-      {error ? <Text style={styles.errorBanner}>{error}</Text> : null}
-      <Input
-        label="New password"
-        value={password}
-        onChangeText={setPassword}
-        placeholder="New password"
-        secureTextEntry
-        error={passwordError}
-      />
-      <Input
-        label="Confirm password"
-        value={confirm}
-        onChangeText={setConfirm}
-        placeholder="Confirm password"
-        secureTextEntry
-        error={confirmError}
-      />
-      <Button label="Update Password" onPress={handleUpdate} loading={loading} />
-    </View>
+    <SafeAreaView style={styles.safe} edges={['top', 'left', 'right', 'bottom']}>
+      <View style={styles.container}>
+        <Text style={styles.title}>New Password</Text>
+        <Text style={styles.subtitle}>Choose a new password for your account.</Text>
+        {error ? <Text style={styles.errorBanner}>{error}</Text> : null}
+        <Input
+          label="New password"
+          value={password}
+          onChangeText={setPassword}
+          placeholder="New password"
+          secureTextEntry
+          error={passwordError}
+        />
+        <Input
+          label="Confirm password"
+          value={confirm}
+          onChangeText={setConfirm}
+          placeholder="Confirm password"
+          secureTextEntry
+          error={confirmError}
+        />
+        <Button label="Update Password" onPress={handleUpdate} loading={loading} />
+      </View>
+    </SafeAreaView>
   )
 }
 
 const styles = StyleSheet.create({
+  safe: { flex: 1, backgroundColor: '#f9f9f9' },
   container: { flex: 1, padding: 24, justifyContent: 'center', backgroundColor: '#f9f9f9' },
   title: { fontSize: 28, fontWeight: 'bold', color: '#2E7D32', textAlign: 'center', marginBottom: 8 },
   subtitle: { fontSize: 15, color: '#555', textAlign: 'center', marginBottom: 24 },

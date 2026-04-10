@@ -8,7 +8,13 @@ import {
   Animated,
   Easing,
 } from 'react-native'
-import { useNavigation, useRoute } from '@react-navigation/native'
+import {
+  useNavigation,
+  useRoute,
+  type NavigationProp,
+  type ParamListBase,
+  StackActions,
+} from '@react-navigation/native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useDispatch } from 'react-redux'
 
@@ -27,7 +33,7 @@ type BookingRow = {
 
 export default function SessionScreen() {
   const dispatch = useDispatch<AppDispatch>()
-  const navigation = useNavigation()
+  const navigation = useNavigation<NavigationProp<ParamListBase>>()
   const route = useRoute()
   const bookingId = (route.params as { bookingId: string }).bookingId
 
@@ -146,7 +152,7 @@ export default function SessionScreen() {
               Alert.alert('Error', error.message)
               return
             }
-            navigation.navigate('MinderDashboard' as never)
+            navigation.dispatch(StackActions.popToTop())
           })()
         },
       },

@@ -8,6 +8,7 @@ import {
   StyleSheet,
   type KeyboardTypeOptions,
   type ReturnKeyTypeOptions,
+  type TextInputProps,
 } from 'react-native'
 
 interface InputProps {
@@ -15,6 +16,7 @@ interface InputProps {
   value: string
   onChangeText: (text: string) => void
   placeholder?: string
+  autoCapitalize?: TextInputProps['autoCapitalize']
   secureTextEntry?: boolean
   error?: string
   multiline?: boolean
@@ -30,6 +32,7 @@ export default function Input({
   value,
   onChangeText,
   placeholder,
+  autoCapitalize = 'none',
   secureTextEntry,
   error,
   multiline,
@@ -51,7 +54,7 @@ export default function Input({
         multiline={multiline}
         keyboardType={keyboardType}
         maxLength={maxLength}
-        autoCapitalize="none"
+        autoCapitalize={autoCapitalize}
         onSubmitEditing={onSubmitEditing}
         returnKeyType={returnKeyType}
         blurOnSubmit={blurOnSubmit}

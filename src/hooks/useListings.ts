@@ -6,8 +6,7 @@
 //   loading: boolean
 //   error: string | null
 //
-//   fetchListings(type?: 'owner_listing' | 'minder_listing'): Promise<void>
-//     → supabase.from('listings').select('*').eq('listing_type', type)
+//   fetchListings(filters?: SearchFilters): Promise<void>
 //
 //   applyFilters(filters: SearchFilters): Promise<void>
 //     → chains: .ilike('location', `%${location}%`)   [filterByLocation]
@@ -15,43 +14,113 @@
 //               .gte('rating', minRating)              [filterByRating]
 //               .eq('animal', animalType)              [filterByAnimal]
 //
-//   createListing(input: NewListingInput): Promise<void>
+//   createListing(input): Promise<{ listing, errorMessage }>
 //     → supabase.from('listings').insert({ ...input, user_id: currentUser.id })
 //
-//   deleteListing(listingID: string): Promise<void>
+//   deleteListing(listingID: string): Promise<{ errorMessage }>
 //     → supabase.from('listings').delete().eq('id', listingID)
 //
-// NewListingInput: { profile, location, description, listing_type, animal?, time?, price? }
+// NewListingInput: { profile, location, description, animal?, time?, price? }
 
 import { AppDispatch } from '../store'
+import type { SearchFilters } from '../store/listingsSlice'
 import { supabase } from '../lib/supabase'
+import { filterListingsByAvailability } from '../types/availability'
 import { Listing } from '../types/Listing'
-import { setError, setListings, setLoading } from '../store/listingsSlice'
+import {
+  bulkGeocodeUkPostcodes,
+  geocodeAddressFallback,
+  geocodeUkPostcode,
+  haversineKm,
+  normalizeUkPostcode,
+  resolveSearchCentre,
+} from '../utils/geocodePostcode'
+import {
+  setError,
+  setListings,
+  setLoading,
+  setMyListings,
+  setMyListingsLoading,
+} from '../store/listingsSlice'
 
-interface ListingFilters {
-  animal?: string
-  location?: string
-  maxPrice?: number
+/** Embedded FK row can be object, single-element array, or missing — normalize to `user` for UI. */
+function pickEmbeddedProfile(row: Record<string, unknown>): unknown {
+  const direct = row.user
+  const emb = row.profiles
+  if (Array.isArray(emb) && emb.length) return emb[0]
+  if (emb && typeof emb === 'object') return emb
+  return direct ?? null
 }
 
-export async function fetchListings(dispatch: AppDispatch, filters?: ListingFilters): Promise<void> {
+/** Joined profile comes back as `user` (alias) or `profiles` depending on select hint — normalize for UI. */
+function attachProfileUser<T extends Record<string, unknown>>(rows: T[]): (T & { user?: unknown })[] {
+  return rows.map((row) => ({ ...row, user: pickEmbeddedProfile(row) }))
+}
+
+async function sortListingsByPostcodeDistance(rows: Listing[], filterPostcode: string): Promise<Listing[]> {
+  const center = await resolveSearchCentre(filterPostcode)
+  if (!center) return rows
+
+  const bulkMap = await bulkGeocodeUkPostcodes(rows.map((r) => r.postcode))
+  const enriched: Listing[] = []
+
+  for (const row of rows) {
+    const key = normalizeUkPostcode(row.postcode ?? '')
+    let lat: number | undefined
+    let lng: number | undefined
+
+    if (key && bulkMap.has(key)) {
+      const c = bulkMap.get(key)!
+      lat = c.lat
+      lng = c.lng
+    } else if (row.postcode?.trim()) {
+      const one = await geocodeUkPostcode(row.postcode)
+      if (one) {
+        lat = one.lat
+        lng = one.lng
+      }
+    }
+    if (lat == null || lng == null) {
+      const line = [row.postcode, row.location].filter(Boolean).join(', ')
+      const fb = line
+        ? await geocodeAddressFallback(line && !/\buk\b/i.test(line) ? `${line}, UK` : line)
+        : null
+      if (fb) {
+        lat = fb.lat
+        lng = fb.lng
+      }
+    }
+
+    const distanceKm =
+      lat != null && lng != null ? haversineKm(center.lat, center.lng, lat, lng) : undefined
+    enriched.push({ ...row, distanceKm })
+  }
+
+  enriched.sort((a, b) => {
+    const da = a.distanceKm ?? Number.POSITIVE_INFINITY
+    const db = b.distanceKm ?? Number.POSITIVE_INFINITY
+    return da - db
+  })
+  return enriched
+}
+
+export async function fetchListings(dispatch: AppDispatch, filters?: SearchFilters): Promise<void> {
   dispatch(setLoading(true))
   dispatch(setError(null))
 
   try {
-    let query = supabase
-      .from('listings')
-      .select('*, user:user_id(*)')
-      .eq('listing_type', 'minder_listing')
+    // Single FK listings.user_id → profiles: embed as `profiles` then map to `user` for UI.
+    let query = supabase.from('listings').select('*, profiles!listings_user_id_fkey(*)')
 
     if (filters?.animal) {
       query = query.ilike('animal', `%${filters.animal}%`)
     }
-    if (filters?.location) {
-      query = query.ilike('location', `%${filters.location}%`)
+    if (filters?.postcode?.trim()) {
+      query = query.ilike('postcode', `%${filters.postcode.trim()}%`)
     }
     if (typeof filters?.maxPrice === 'number') {
-      query = query.lte('price', filters.maxPrice)
+      // Include rows with no price set (null), not only lte — plain lte() drops nulls in SQL.
+      query = query.or(`price.is.null,price.lte.${filters.maxPrice}`)
     }
 
     const { data, error } = await query.order('created_at', { ascending: false })
@@ -59,7 +128,21 @@ export async function fetchListings(dispatch: AppDispatch, filters?: ListingFilt
       throw error
     }
 
-    dispatch(setListings((data ?? []) as Listing[]))
+    let rows = attachProfileUser((data ?? []) as Record<string, unknown>[]) as unknown as Listing[]
+    rows = filterListingsByAvailability(rows, {
+      day: filters?.day,
+      timeFrom: filters?.timeFrom,
+      timeTo: filters?.timeTo,
+    })
+    if (filters?.postcode?.trim()) {
+      rows = await sortListingsByPostcodeDistance(rows, filters.postcode.trim())
+    } else {
+      rows = rows.map((r) => {
+        const { distanceKm: _, ...rest } = r
+        return rest as Listing
+      })
+    }
+    dispatch(setListings(rows))
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Failed to fetch listings'
     dispatch(setError(message))
@@ -69,7 +152,7 @@ export async function fetchListings(dispatch: AppDispatch, filters?: ListingFilt
 }
 
 export async function fetchMyListings(dispatch: AppDispatch, userId: string): Promise<Listing[]> {
-  dispatch(setLoading(true))
+  dispatch(setMyListingsLoading(true))
   dispatch(setError(null))
 
   try {
@@ -84,36 +167,39 @@ export async function fetchMyListings(dispatch: AppDispatch, userId: string): Pr
     }
 
     const listings = (data ?? []) as Listing[]
-    dispatch(setListings(listings))
+    dispatch(setMyListings(listings))
     return listings
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Failed to fetch your listings'
     dispatch(setError(message))
     return []
   } finally {
-    dispatch(setLoading(false))
+    dispatch(setMyListingsLoading(false))
   }
 }
 
 export async function createListing(
   dispatch: AppDispatch,
-  listing: Omit<Listing, 'id' | 'created_at' | 'rating'>
-): Promise<Listing | null> {
-  dispatch(setLoading(true))
+  listing: Omit<Listing, 'id' | 'created_at'>
+): Promise<{ listing: Listing | null; errorMessage: string | null }> {
+  dispatch(setMyListingsLoading(true))
   dispatch(setError(null))
 
   try {
-    const { data, error } = await supabase.from('listings').insert(listing).select('*').single()
+    const { distanceKm: _clientDistance, ...row } = listing as Omit<Listing, 'id' | 'created_at'> & {
+      distanceKm?: number
+    }
+    const { data, error } = await supabase.from('listings').insert(row).select('*').single()
     if (error) {
       throw error
     }
-    return data as Listing
+    return { listing: data as Listing, errorMessage: null }
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Failed to create listing'
     dispatch(setError(message))
-    return null
+    return { listing: null, errorMessage: message }
   } finally {
-    dispatch(setLoading(false))
+    dispatch(setMyListingsLoading(false))
   }
 }
 
@@ -121,25 +207,28 @@ export async function updateListing(
   dispatch: AppDispatch,
   id: string,
   updates: Partial<Listing>
-): Promise<void> {
-  dispatch(setLoading(true))
+): Promise<{ errorMessage: string | null }> {
+  dispatch(setMyListingsLoading(true))
   dispatch(setError(null))
 
   try {
-    const { error } = await supabase.from('listings').update(updates).eq('id', id)
+    const { distanceKm: _clientDistance, ...rest } = updates as Partial<Listing> & { distanceKm?: number }
+    const { error } = await supabase.from('listings').update(rest).eq('id', id)
     if (error) {
       throw error
     }
+    return { errorMessage: null }
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Failed to update listing'
     dispatch(setError(message))
+    return { errorMessage: message }
   } finally {
-    dispatch(setLoading(false))
+    dispatch(setMyListingsLoading(false))
   }
 }
 
-export async function deleteListing(dispatch: AppDispatch, id: string): Promise<void> {
-  dispatch(setLoading(true))
+export async function deleteListing(dispatch: AppDispatch, id: string): Promise<{ errorMessage: string | null }> {
+  dispatch(setMyListingsLoading(true))
   dispatch(setError(null))
 
   try {
@@ -147,10 +236,12 @@ export async function deleteListing(dispatch: AppDispatch, id: string): Promise<
     if (error) {
       throw error
     }
+    return { errorMessage: null }
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Failed to delete listing'
     dispatch(setError(message))
+    return { errorMessage: message }
   } finally {
-    dispatch(setLoading(false))
+    dispatch(setMyListingsLoading(false))
   }
 }

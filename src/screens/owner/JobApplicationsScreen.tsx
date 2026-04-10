@@ -18,6 +18,7 @@ import {
   rejectApplication,
 } from '@/src/hooks/useBookings'
 import { BookingApplication } from '@/src/types/Booking'
+import { dmThreadId } from '@/src/utils/threadId'
 
 interface RouteParams {
   listingId?: string
@@ -104,7 +105,7 @@ export default function JobApplicationsScreen() {
           onReject={onReject}
           onMessage={minderId =>
             navigation.navigate('Chat', {
-              threadId: `${user?.id}_${minderId}`,
+              threadId: user?.id ? dmThreadId(user.id, minderId) : '',
               otherUserId: minderId,
             })
           }

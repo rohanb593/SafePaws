@@ -7,6 +7,7 @@ import OwnerDashboardScreen from '../screens/owner/OwnerDashboardScreen'
 import SearchMinderScreen from '../screens/owner/SearchMinderScreen'
 import ListingsScreen from '../screens/shared/ListingsScreen'
 import ProfileScreen from '../screens/shared/ProfileScreen'
+import ChatsListScreen from '../screens/shared/ChatsListScreen'
 import MinderProfileScreen from '../screens/owner/MinderProfileScreen'
 import BookingRequestScreen from '../screens/owner/BookingRequestScreen'
 import BookingDetailsScreen from '../screens/owner/BookingDetailsScreen'
@@ -17,16 +18,18 @@ import FavouritesScreen from '../screens/owner/FavouritesScreen'
 import LeaveReviewScreen from '../screens/owner/LeaveReviewScreen'
 import ChatScreen from '../screens/shared/ChatScreen'
 import CreateTicketScreen from '../screens/shared/CreateTicketScreen'
+import MindersMapScreen from '../screens/owner/MindersMapScreen'
 
 export type OwnerTabParamList = {
   Dashboard: undefined
   Search: undefined
   Listings: undefined
-  Profile: undefined
+  Chats: undefined
 }
 
 export type OwnerStackParamList = {
   OwnerTabs: undefined
+  Profile: undefined
   MinderProfile: { minderId: string }
   BookingRequest: { minderId: string }
   BookingDetails: { bookingId: string }
@@ -36,6 +39,7 @@ export type OwnerStackParamList = {
   Favourites: undefined
   LeaveReview: { bookingId: string; revieweeId: string }
   Chat: { threadId: string; otherUserId: string }
+  MindersMap: undefined
   CreateTicket: undefined
 }
 
@@ -52,7 +56,7 @@ function OwnerTabs() {
 
           if (route.name === 'Search') iconName = 'search'
           if (route.name === 'Listings') iconName = 'list'
-          if (route.name === 'Profile') iconName = 'person'
+          if (route.name === 'Chats') iconName = 'chat'
 
           return <Icon name={iconName} size={size} color={color} />
         },
@@ -61,7 +65,7 @@ function OwnerTabs() {
       <Tab.Screen name="Dashboard" component={OwnerDashboardScreen} />
       <Tab.Screen name="Search" component={SearchMinderScreen} />
       <Tab.Screen name="Listings" component={ListingsScreen} />
-      <Tab.Screen name="Profile" component={ProfileScreen} />
+      <Tab.Screen name="Chats" component={ChatsListScreen} options={{ title: 'Messages' }} />
     </Tab.Navigator>
   )
 }
@@ -70,6 +74,7 @@ export default function OwnerNavigator() {
   return (
     <Stack.Navigator>
       <Stack.Screen name="OwnerTabs" component={OwnerTabs} options={{ headerShown: false }} />
+      <Stack.Screen name="Profile" component={ProfileScreen} options={{ title: 'Profile' }} />
       <Stack.Screen name="MinderProfile" component={MinderProfileScreen} />
       <Stack.Screen name="BookingRequest" component={BookingRequestScreen} />
       <Stack.Screen name="BookingDetails" component={BookingDetailsScreen} />
@@ -79,6 +84,7 @@ export default function OwnerNavigator() {
       <Stack.Screen name="Favourites" component={FavouritesScreen} />
       <Stack.Screen name="LeaveReview" component={LeaveReviewScreen} />
       <Stack.Screen name="Chat" component={ChatScreen} />
+      <Stack.Screen name="MindersMap" component={MindersMapScreen} options={{ headerShown: false }} />
       <Stack.Screen name="CreateTicket" component={CreateTicketScreen} />
     </Stack.Navigator>
   )

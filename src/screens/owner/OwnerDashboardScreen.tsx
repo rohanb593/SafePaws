@@ -1,7 +1,9 @@
-import { useCallback, useEffect, useState } from 'react'
-import { ScrollView, Text, View, StyleSheet } from 'react-native'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { Pressable, ScrollView, Text, View, StyleSheet } from 'react-native'
+import Icon from '@expo/vector-icons/MaterialIcons'
+import { SafeAreaView } from 'react-native-safe-area-context'
 import { useDispatch, useSelector } from 'react-redux'
-import { useNavigation, type NavigationProp, type ParamListBase } from '@react-navigation/native'
+import { useFocusEffect, useNavigation, type NavigationProp, type ParamListBase } from '@react-navigation/native'
 import { supabase } from '@/src/lib/supabase'
 import { RootState, type AppDispatch } from '@/src/store'
 import { setBookings } from '@/src/store/bookingSlice'
@@ -20,6 +22,12 @@ export default function OwnerDashboardScreen() {
   const [pets, setPets] = useState<Pet[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  /** After first load, refetch on focus without full-screen spinner (e.g. returning from Pet Profile). */
+  const hasCompletedInitialLoad = useRef(false)
+
+  useEffect(() => {
+    hasCompletedInitialLoad.current = false
+  }, [user?.id])
 
   const loadDashboardData = useCallback(async () => {
     if (!user?.id) {
@@ -27,9 +35,11 @@ export default function OwnerDashboardScreen() {
       return
     }
 
+    const showFullScreenLoading = !hasCompletedInitialLoad.current
+
     try {
-      setLoading(true)
       setError(null)
+      if (showFullScreenLoading) setLoading(true)
 
       const { data: bookingsData, error: bookingsError } = await supabase
         .from('bookings')
@@ -53,73 +63,97 @@ export default function OwnerDashboardScreen() {
       const message = err instanceof Error ? err.message : 'Failed to load dashboard'
       setError(message)
     } finally {
-      setLoading(false)
+      hasCompletedInitialLoad.current = true
+      if (showFullScreenLoading) setLoading(false)
     }
   }, [dispatch, user?.id])
 
-  useEffect(() => {
-    loadDashboardData()
-  }, [loadDashboardData])
+  useFocusEffect(
+    useCallback(() => {
+      void loadDashboardData()
+    }, [loadDashboardData])
+  )
 
   if (loading) return <LoadingSpinner fullScreen />
 
   return (
-    <ScrollView style={styles.scroll} contentContainerStyle={styles.container}>
-      <Text style={styles.greeting}>Hello, {user?.display_name || 'there'}</Text>
-      {error ? <Text style={styles.errorText}>{error}</Text> : null}
+    <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
+      <ScrollView style={styles.scroll} contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
+        <View style={styles.topBar}>
+          <Text style={styles.screenTitle}>Dashboard</Text>
+          <Pressable
+            onPress={() => navigation.getParent()?.navigate('Profile' as never)}
+            hitSlop={10}
+            accessibilityRole="button"
+            accessibilityLabel="Open profile"
+          >
+            <Icon name="account-circle" size={34} color="#1f1f1f" />
+          </Pressable>
+        </View>
 
-      <Text style={styles.sectionTitle}>Upcoming Bookings</Text>
-      {bookings.length === 0 ? (
-        <Text style={styles.empty}>No upcoming bookings yet.</Text>
-      ) : (
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.horizontalList}
-        >
-          {bookings.map(item => (
-            <View key={item.id} style={styles.bookingCardWrap}>
-              <BookingCard
-                booking={item}
-                onPress={() => navigation.navigate('BookingDetails', { bookingId: item.id })}
+        {error ? <Text style={styles.errorText}>{error}</Text> : null}
+
+        <Text style={[styles.sectionTitle, styles.sectionTitleFirst]}>Upcoming Bookings</Text>
+        {bookings.length === 0 ? (
+          <Text style={styles.empty}>No upcoming bookings yet.</Text>
+        ) : (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.horizontalList}
+          >
+            {bookings.map(item => (
+              <View key={item.id} style={styles.bookingCardWrap}>
+                <BookingCard
+                  booking={item}
+                  onPress={() => navigation.navigate('BookingDetails', { bookingId: item.id })}
+                />
+              </View>
+            ))}
+          </ScrollView>
+        )}
+
+        <Text style={styles.sectionTitle}>My Pets</Text>
+        {pets.length === 0 ? (
+          <Text style={styles.empty}>No pets yet. Add your first pet below.</Text>
+        ) : (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.horizontalList}
+          >
+            {pets.map(item => (
+              <PetCard
+                key={item.id}
+                pet={item}
+                onPress={() => navigation.navigate('PetProfile', { petId: item.id })}
               />
-            </View>
-          ))}
-        </ScrollView>
-      )}
+            ))}
+          </ScrollView>
+        )}
 
-      <Text style={styles.sectionTitle}>My Pets</Text>
-      {pets.length === 0 ? (
-        <Text style={styles.empty}>No pets yet. Add your first pet below.</Text>
-      ) : (
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.horizontalList}
-        >
-          {pets.map(item => (
-            <PetCard
-              key={item.id}
-              pet={item}
-              onPress={() => navigation.navigate('PetProfile', { petId: item.id })}
-            />
-          ))}
-        </ScrollView>
-      )}
-
-      <View style={styles.addButtonWrap}>
-        <Button label="Add Pet" onPress={() => navigation.navigate('AddPet')} />
-      </View>
-    </ScrollView>
+        <View style={styles.addButtonWrap}>
+          <Button label="Add Pet" onPress={() => navigation.navigate('AddPet')} />
+        </View>
+      </ScrollView>
+    </SafeAreaView>
   )
 }
 
 const styles = StyleSheet.create({
-  scroll: { flex: 1, backgroundColor: '#fff' },
-  container: { padding: 16, paddingBottom: 28, backgroundColor: '#fff' },
-  greeting: { fontSize: 24, fontWeight: '700', color: '#1a1a1a', marginBottom: 10 },
+  safe: { flex: 1, backgroundColor: '#f8f9fb' },
+  scroll: { flex: 1, backgroundColor: '#f8f9fb' },
+  container: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 32, backgroundColor: '#f8f9fb' },
+  topBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  screenTitle: { fontSize: 24, fontWeight: '800', color: '#111' },
   errorText: { color: '#c0392b', marginBottom: 8, fontSize: 14 },
-  sectionTitle: { fontSize: 19, fontWeight: '700', color: '#1a1a1a', marginTop: 18, marginBottom: 10 },
+  sectionTitle: { fontSize: 18, fontWeight: '700', color: '#111', marginTop: 22, marginBottom: 10 },
+  sectionTitleFirst: { marginTop: 0 },
   horizontalList: { paddingVertical: 4 },
   bookingCardWrap: { width: 320, marginRight: 12 },
   empty: { color: '#7a7a7a', fontSize: 14, paddingVertical: 10 },

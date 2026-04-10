@@ -14,7 +14,7 @@
 // Exports: PetOwner interface (extends User), SearchFilters interface
 //
 // Methods implemented in hooks/useAuth.ts:
-//   searchForMinder(filters: SearchFilters): Promise<MinderListing[]>
+//   searchForMinder(filters: SearchFilters): Promise<Listing[]>
 //   viewMinderProfile(minderID: string): Promise<PetMinder>
 //   bookMinder(details: BookingDetails): Promise<Booking>
 //   trackMinder(bookingID: string): Promise<GPSCoordinates>

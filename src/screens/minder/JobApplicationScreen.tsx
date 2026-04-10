@@ -3,6 +3,7 @@ import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { useNavigation, useRoute } from '@react-navigation/native'
 import { useDispatch, useSelector } from 'react-redux'
 import { AppDispatch, RootState } from '@/src/store'
+import { formatListingAvailabilityDisplay } from '@/src/types/availability'
 import { Listing } from '@/src/types/Listing'
 import { Calendar } from '@/src/types/Calendar'
 import { supabase } from '@/src/lib/supabase'
@@ -133,7 +134,9 @@ export default function JobApplicationScreen() {
           <Text style={styles.heading}>Owner listing</Text>
           <Text style={styles.line}>Location: {listing.location}</Text>
           <Text style={styles.line}>Pet: {listing.animal || 'Not specified'}</Text>
-          <Text style={styles.line}>Owner time: {listing.time || 'Not specified'}</Text>
+          <Text style={styles.line}>
+            Availability: {formatListingAvailabilityDisplay(listing)}
+          </Text>
           <Text style={styles.line}>
             Owner budget: {listing.price ? `£${listing.price.toFixed(2)}` : 'Not specified'}
           </Text>
