@@ -10,10 +10,13 @@ import {
 } from 'react-native'
 import { useNavigation, useRoute } from '@react-navigation/native'
 import { SafeAreaView } from 'react-native-safe-area-context'
+import { useDispatch } from 'react-redux'
 
 import PetLocationMap from '@/src/components/maps/PetLocationMap'
 import { startGPSTracking } from '@/src/hooks/useGPS'
+import { updateBookingStatus } from '@/src/hooks/useBookings'
 import { supabase } from '@/src/lib/supabase'
+import { AppDispatch } from '@/src/store'
 
 type BookingRow = {
   id: string
@@ -23,6 +26,7 @@ type BookingRow = {
 }
 
 export default function SessionScreen() {
+  const dispatch = useDispatch<AppDispatch>()
   const navigation = useNavigation()
   const route = useRoute()
   const bookingId = (route.params as { bookingId: string }).bookingId
@@ -131,16 +135,18 @@ export default function SessionScreen() {
             setEnding(true)
             stopTrackingRef.current?.()
             stopTrackingRef.current = null
-            const { error } = await supabase
-              .from('bookings')
-              .update({ status: 'completed' })
-              .eq('id', bookingId)
+            let error: Error | null = null
+            try {
+              await updateBookingStatus(dispatch, bookingId, 'completed')
+            } catch (err: unknown) {
+              error = err instanceof Error ? err : new Error('Failed to complete booking')
+            }
             setEnding(false)
             if (error) {
               Alert.alert('Error', error.message)
               return
             }
-            navigation.goBack()
+            navigation.navigate('MinderDashboard' as never)
           })()
         },
       },
