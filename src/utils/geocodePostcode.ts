@@ -93,3 +93,40 @@ export async function resolveSearchCentre(postcode: string): Promise<LatLng | nu
   return geocodeAddressFallback(`${trimmed}, UK`)
 }
 
+/**
+ * Lat/lng for a listing (postcode → UK API → free-text). Used for map pins.
+ */
+export async function coordinatesForListing(listing: {
+  postcode?: string | null
+  location?: string | null
+}): Promise<LatLng | null> {
+  const bulk = await bulkGeocodeUkPostcodes([listing.postcode])
+  const key = normalizeUkPostcode(listing.postcode ?? '')
+  let lat: number | undefined
+  let lng: number | undefined
+
+  if (key && bulk.has(key)) {
+    const c = bulk.get(key)!
+    lat = c.lat
+    lng = c.lng
+  } else if (listing.postcode?.trim()) {
+    const one = await geocodeUkPostcode(listing.postcode)
+    if (one) {
+      lat = one.lat
+      lng = one.lng
+    }
+  }
+  if (lat == null || lng == null) {
+    const line = [listing.postcode, listing.location].filter(Boolean).join(', ')
+    const fb = line
+      ? await geocodeAddressFallback(line && !/\buk\b/i.test(line) ? `${line}, UK` : line)
+      : null
+    if (fb) {
+      lat = fb.lat
+      lng = fb.lng
+    }
+  }
+  if (lat == null || lng == null) return null
+  return { lat, lng }
+}
+

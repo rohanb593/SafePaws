@@ -38,14 +38,7 @@ export default function BookingDetailsScreen() {
 
       const { data: bookingData, error: bookingErr } = await supabase
         .from('bookings')
-        .select(
-          `
-          *,
-          pet:pets!pet_id(*),
-          minder:profiles!minder_id(*),
-          requester:profiles!requester_id(*)
-        `
-        )
+        .select('*, pet:pet_id(*), minder:minder_id(*), requester:requester_id(*)')
         .eq('id', bookingId)
         .single()
 

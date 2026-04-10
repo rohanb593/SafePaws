@@ -28,21 +28,44 @@ function sameLocalDay(a: Date, b: Date): boolean {
   )
 }
 
+function isCalendarDateBeforeToday(year: number, month: number, day: number): boolean {
+  const cell = startOfLocalDay(new Date(year, month, day))
+  const today = startOfLocalDay(new Date())
+  return cell.getTime() < today.getTime()
+}
+
+/** Match slot.day to calendar weekday (full name, short Mon–Sun, or ISO date). */
+function slotMatchesCalendarDay(
+  slot: TimeSlot,
+  year: number,
+  month: number,
+  day: number,
+  weekdayFull: string
+): boolean {
+  const raw = slot.day.trim()
+  if (!raw) return false
+  if (/^\d{4}-\d{2}-\d{2}/.test(raw)) {
+    const parsed = new Date(raw)
+    if (Number.isNaN(parsed.getTime())) return false
+    return (
+      parsed.getFullYear() === year && parsed.getMonth() === month && parsed.getDate() === day
+    )
+  }
+  const r = raw.toLowerCase()
+  const full = weekdayFull.toLowerCase()
+  const short = weekdayFull.slice(0, 3).toLowerCase()
+  return r === full || r === short
+}
+
 function isDayAvailable(year: number, month: number, day: number, slots: TimeSlot[]): boolean {
+  if (isCalendarDateBeforeToday(year, month, day)) return false
+
+  // Minder has not set availability yet — still allow owners to pick dates (minder confirms in app).
+  if (!slots || slots.length === 0) return true
+
   const d = new Date(year, month, day)
   const weekday = WEEKDAY_NAMES[d.getDay()]
-  return slots.some(slot => {
-    const raw = slot.day.trim()
-    if (!raw) return false
-    if (/^\d{4}-\d{2}-\d{2}/.test(raw)) {
-      const parsed = new Date(raw)
-      if (Number.isNaN(parsed.getTime())) return false
-      return (
-        parsed.getFullYear() === year && parsed.getMonth() === month && parsed.getDate() === day
-      )
-    }
-    return raw.toLowerCase() === weekday.toLowerCase()
-  })
+  return slots.some(slot => slotMatchesCalendarDay(slot, year, month, day, weekday))
 }
 
 function mondayIndexFromSunday(dayIndex: number): number {
@@ -120,8 +143,11 @@ export default function CalendarPicker({
       rangeEnd = swap
     }
     if (sameLocalDay(rangeStart, rangeEnd)) {
-      setTempStart(cellDate)
-      setTempEnd(null)
+      const s = startOfLocalDay(cellDate)
+      const e = endOfLocalDay(cellDate)
+      setTempStart(s)
+      setTempEnd(e)
+      onChange(s, e)
       return
     }
 

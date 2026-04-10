@@ -19,6 +19,9 @@ import LeaveReviewScreen from '../screens/owner/LeaveReviewScreen'
 import ChatScreen from '../screens/shared/ChatScreen'
 import CreateTicketScreen from '../screens/shared/CreateTicketScreen'
 import MindersMapScreen from '../screens/owner/MindersMapScreen'
+import MinderLocationMapScreen from '../screens/owner/MinderLocationMapScreen'
+import JobDetailsScreen from '../screens/minder/JobDetailsScreen'
+import SessionScreen from '../screens/minder/SessionScreen'
 
 export type OwnerTabParamList = {
   Dashboard: undefined
@@ -40,7 +43,12 @@ export type OwnerStackParamList = {
   LeaveReview: { bookingId: string; revieweeId: string }
   Chat: { threadId: string; otherUserId: string }
   MindersMap: undefined
+  MinderLocationMap: { minderId: string }
   CreateTicket: undefined
+  /** Accept/decline when someone books you as minder (same screen as Minder stack). */
+  JobDetails: { bookingId: string }
+  /** Live GPS session (minder) — must exist here when JobDetails is opened from this stack. */
+  Session: { bookingId: string }
 }
 
 const Tab = createBottomTabNavigator<OwnerTabParamList>()
@@ -85,6 +93,9 @@ export default function OwnerNavigator() {
       <Stack.Screen name="LeaveReview" component={LeaveReviewScreen} />
       <Stack.Screen name="Chat" component={ChatScreen} />
       <Stack.Screen name="MindersMap" component={MindersMapScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="MinderLocationMap" component={MinderLocationMapScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="JobDetails" component={JobDetailsScreen} options={{ title: 'Booking request' }} />
+      <Stack.Screen name="Session" component={SessionScreen} options={{ title: 'Active session', headerShown: false }} />
       <Stack.Screen name="CreateTicket" component={CreateTicketScreen} />
     </Stack.Navigator>
   )

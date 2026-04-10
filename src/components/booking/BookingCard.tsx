@@ -20,7 +20,8 @@ function petEmoji(petType: string | undefined): string {
 }
 
 export default function BookingCard({ booking, onPress }: BookingCardProps) {
-  const { pet, minder, start_time, end_time, location, status } = booking
+  const { pet, minder, requester, start_time, end_time, location, status } = booking
+  const counterparty = minder ?? requester
   const petLabel = `${petEmoji(pet?.pet_type)} ${pet?.name ?? 'Pet'}`
 
   return (
@@ -30,9 +31,9 @@ export default function BookingCard({ booking, onPress }: BookingCardProps) {
           {petLabel}
         </Text>
         <View style={styles.minderBlock}>
-          <Avatar name={minder?.display_name ?? '?'} uri={null} size={40} />
+          <Avatar name={counterparty?.display_name ?? '?'} uri={null} size={40} />
           <Text style={styles.minderName} numberOfLines={1}>
-            {minder?.display_name ?? 'Minder'}
+            {counterparty?.display_name ?? (requester && !minder ? 'Pet owner' : 'Minder')}
           </Text>
         </View>
       </View>

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import {
   Alert,
   Pressable,
@@ -16,13 +16,10 @@ import {
   StackActions,
 } from '@react-navigation/native'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { useDispatch } from 'react-redux'
 
 import PetLocationMap from '@/src/components/maps/PetLocationMap'
-import { startGPSTracking } from '@/src/hooks/useGPS'
-import { updateBookingStatus } from '@/src/hooks/useBookings'
 import { supabase } from '@/src/lib/supabase'
-import { AppDispatch } from '@/src/store'
+import { useActiveMinderSession } from '@/src/context/ActiveMinderSessionContext'
 
 type BookingRow = {
   id: string
@@ -32,18 +29,28 @@ type BookingRow = {
 }
 
 export default function SessionScreen() {
-  const dispatch = useDispatch<AppDispatch>()
   const navigation = useNavigation<NavigationProp<ParamListBase>>()
   const route = useRoute()
   const bookingId = (route.params as { bookingId: string }).bookingId
 
+  const {
+    beginOrContinueSession,
+    completeSession,
+    lastCoords,
+    sessionStartedAtMs,
+    activeBookingId,
+  } = useActiveMinderSession()
+
   const [booking, setBooking] = useState<BookingRow | null>(null)
   const [loading, setLoading] = useState(true)
-  const [latitude, setLatitude] = useState<number | null>(null)
-  const [longitude, setLongitude] = useState<number | null>(null)
-  const [elapsed, setElapsed] = useState(0)
   const [ending, setEnding] = useState(false)
+  const [elapsedSec, setElapsedSec] = useState(0)
   const pulse = useState(() => new Animated.Value(1))[0]
+
+  useEffect(() => {
+    beginOrContinueSession(bookingId)
+    // Intentionally no cleanup: GPS continues when navigating back until "End session".
+  }, [bookingId, beginOrContinueSession])
 
   useEffect(() => {
     let mounted = true
@@ -80,25 +87,17 @@ export default function SessionScreen() {
     }
   }, [bookingId])
 
-  const stopTrackingRef = useRef<(() => void) | null>(null)
-
   useEffect(() => {
-    stopTrackingRef.current = startGPSTracking(bookingId, {
-      onLocation: (lat, lon) => {
-        setLatitude(lat)
-        setLongitude(lon)
-      },
-    })
-    return () => {
-      stopTrackingRef.current?.()
-      stopTrackingRef.current = null
+    if (sessionStartedAtMs == null || activeBookingId !== bookingId) {
+      setElapsedSec(0)
+      return
     }
-  }, [bookingId])
-
-  useEffect(() => {
-    const sub = setInterval(() => setElapsed((s) => s + 1), 1000)
+    const update = () =>
+      setElapsedSec(Math.floor((Date.now() - sessionStartedAtMs) / 1000))
+    update()
+    const sub = setInterval(update, 1000)
     return () => clearInterval(sub)
-  }, [])
+  }, [sessionStartedAtMs, activeBookingId, bookingId])
 
   useEffect(() => {
     const loop = Animated.loop(
@@ -139,13 +138,12 @@ export default function SessionScreen() {
         onPress: () => {
           void (async () => {
             setEnding(true)
-            stopTrackingRef.current?.()
-            stopTrackingRef.current = null
             let error: Error | null = null
             try {
-              await updateBookingStatus(dispatch, bookingId, 'completed')
+              const result = await completeSession()
+              error = result.error
             } catch (err: unknown) {
-              error = err instanceof Error ? err : new Error('Failed to complete booking')
+              error = err instanceof Error ? err : new Error('Failed to complete session')
             }
             setEnding(false)
             if (error) {
@@ -162,6 +160,9 @@ export default function SessionScreen() {
   const petName = booking?.petName ?? 'Pet'
   const ownerName = booking?.ownerName ?? 'Owner'
 
+  const lat = lastCoords?.latitude ?? null
+  const lon = lastCoords?.longitude ?? null
+
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
       <View style={styles.header}>
@@ -169,6 +170,7 @@ export default function SessionScreen() {
           <Text style={styles.back}>← Back</Text>
         </Pressable>
         <Text style={styles.title}>Active session</Text>
+        <Text style={styles.hint}>GPS keeps running until you end the session.</Text>
         <Text style={styles.sub}>
           {petName} · {ownerName}
         </Text>
@@ -181,17 +183,17 @@ export default function SessionScreen() {
 
       <View style={styles.timerRow}>
         <Text style={styles.timerLabel}>Session time</Text>
-        <Text style={styles.timerValue}>{formatElapsed(elapsed)}</Text>
+        <Text style={styles.timerValue}>{formatElapsed(elapsedSec)}</Text>
         <View style={styles.trackRow}>
           <Animated.View style={[styles.pulse, { opacity: pulse }]} />
           <Text style={styles.trackText}>GPS sharing active</Text>
         </View>
       </View>
 
-      {!loading && latitude != null && longitude != null ? (
+      {!loading && lat != null && lon != null ? (
         <PetLocationMap
-          latitude={latitude}
-          longitude={longitude}
+          latitude={lat}
+          longitude={lon}
           markerTitle="You (shared)"
           style={styles.map}
         />
@@ -221,6 +223,7 @@ const styles = StyleSheet.create({
   header: { paddingHorizontal: 16, paddingBottom: 8 },
   back: { fontSize: 16, color: '#2E7D32', fontWeight: '600', marginBottom: 8 },
   title: { fontSize: 22, fontWeight: '700', color: '#1b4332' },
+  hint: { fontSize: 13, color: '#666', marginBottom: 6 },
   sub: { fontSize: 16, color: '#333', marginTop: 4 },
   loc: { fontSize: 14, color: '#666', marginTop: 6 },
   timerRow: { paddingHorizontal: 16, marginBottom: 8 },

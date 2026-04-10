@@ -1,5 +1,5 @@
 import { useRoute, useNavigation } from '@react-navigation/native'
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { ScrollView, View, Text, Switch, StyleSheet, Alert } from 'react-native'
 import { useDispatch, useSelector } from 'react-redux'
 import { AppDispatch, RootState } from '@/src/store'
@@ -17,6 +17,10 @@ import CalendarPicker from '@/src/components/booking/CalendarPicker'
 import { formatDate } from '@/src/utils/formatDate'
 import { formatPrice, formatPricePerHour } from '@/src/utils/formatPrice'
 import { supabase } from '@/src/lib/supabase'
+import {
+  allowedPetTypesFromListingAnimal,
+  petTypeMatchesListing,
+} from '@/src/utils/listingAnimals'
 
 interface RouteParams {
   minderId: string
@@ -33,6 +37,8 @@ export default function BookingRequestScreen() {
   const [selectedPetId, setSelectedPetId] = useState<string | null>(null)
   const [minder, setMinder] = useState<User | null>(null)
   const [minderHourlyRate, setMinderHourlyRate] = useState(0)
+  /** Comma-separated from `listings.animal` — restricts which owner pets can be booked. */
+  const [minderListingAnimal, setMinderListingAnimal] = useState<string | null>(null)
   const [minderCalendar, setMinderCalendar] = useState<Calendar | null>(null)
   const [selectedStart, setSelectedStart] = useState<Date | null>(null)
   const [selectedEnd, setSelectedEnd] = useState<Date | null>(null)
@@ -73,7 +79,7 @@ export default function BookingRequestScreen() {
 
       const { data: listingRow, error: listingErr } = await supabase
         .from('listings')
-        .select('price')
+        .select('price, animal')
         .eq('user_id', minderId)
         .order('created_at', { ascending: false })
         .limit(1)
@@ -81,6 +87,8 @@ export default function BookingRequestScreen() {
 
       if (listingErr) throw listingErr
       setMinderHourlyRate(listingRow?.price ?? 0)
+      const animalRaw = (listingRow as { animal?: string | null } | null)?.animal
+      setMinderListingAnimal(animalRaw?.trim() ? animalRaw.trim() : null)
 
       const { data: calData, error: calErr } = await supabase
         .from('calendars')
@@ -101,6 +109,22 @@ export default function BookingRequestScreen() {
   useEffect(() => {
     loadData()
   }, [loadData])
+
+  const allowedPetTypes = useMemo(
+    () => allowedPetTypesFromListingAnimal(minderListingAnimal),
+    [minderListingAnimal]
+  )
+
+  const eligiblePets = useMemo(() => {
+    if (allowedPetTypes == null) return pets
+    return pets.filter((p) => petTypeMatchesListing(p.pet_type, allowedPetTypes))
+  }, [pets, allowedPetTypes])
+
+  useEffect(() => {
+    if (selectedPetId && !eligiblePets.some((p) => p.id === selectedPetId)) {
+      setSelectedPetId(null)
+    }
+  }, [eligiblePets, selectedPetId])
 
   const isFormValid = Boolean(
     selectedPetId &&
@@ -152,7 +176,11 @@ export default function BookingRequestScreen() {
   const estimatedPrice = estimatedHours * minderHourlyRate
 
   return (
-    <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
+    <ScrollView
+      style={styles.scroll}
+      contentContainerStyle={styles.content}
+      keyboardShouldPersistTaps="handled"
+    >
       {error ? <Text style={styles.errorBanner}>{error}</Text> : null}
 
       {minder ? (
@@ -168,6 +196,11 @@ export default function BookingRequestScreen() {
       ) : null}
 
       <Text style={styles.sectionTitle}>1. Select your pet</Text>
+      {allowedPetTypes != null && allowedPetTypes.length > 0 ? (
+        <Text style={styles.filterHint}>
+          This minder&apos;s listing is for: {allowedPetTypes.join(', ')}. Only matching pets are shown.
+        </Text>
+      ) : null}
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -176,8 +209,14 @@ export default function BookingRequestScreen() {
       >
         {pets.length === 0 ? (
           <Text style={styles.muted}>No pets yet. Add a pet first.</Text>
+        ) : eligiblePets.length === 0 ? (
+          <Text style={styles.warning}>
+            None of your pets match this minder&apos;s listing
+            {allowedPetTypes?.length ? ` (${allowedPetTypes.join(', ')})` : ''}. Add a compatible pet or choose
+            another minder.
+          </Text>
         ) : (
-          pets.map(pet => (
+          eligiblePets.map(pet => (
             <PetCard
               key={pet.id}
               pet={pet}
@@ -258,6 +297,19 @@ const styles = StyleSheet.create({
   hScroll: { marginBottom: 8 },
   hScrollContent: { paddingVertical: 4 },
   muted: { color: '#888', fontSize: 14, paddingVertical: 8 },
+  filterHint: {
+    fontSize: 13,
+    color: '#37474f',
+    marginBottom: 10,
+    lineHeight: 18,
+  },
+  warning: {
+    color: '#b71c1c',
+    fontSize: 14,
+    paddingVertical: 8,
+    maxWidth: 340,
+    lineHeight: 20,
+  },
   rangeHint: { fontSize: 14, color: '#555', marginTop: 8, marginBottom: 8 },
   recurringRow: {
     flexDirection: 'row',

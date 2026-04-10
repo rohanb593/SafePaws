@@ -3,7 +3,14 @@ import { Pressable, ScrollView, Text, View, StyleSheet } from 'react-native'
 import Icon from '@expo/vector-icons/MaterialIcons'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useDispatch, useSelector } from 'react-redux'
-import { useFocusEffect, useNavigation, type NavigationProp, type ParamListBase } from '@react-navigation/native'
+import {
+  useFocusEffect,
+  useNavigation,
+  type NavigationProp,
+  type ParamListBase,
+} from '@react-navigation/native'
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
+import type { OwnerStackParamList } from '@/src/navigation/OwnerNavigator'
 import { supabase } from '@/src/lib/supabase'
 import { RootState, type AppDispatch } from '@/src/store'
 import { setBookings } from '@/src/store/bookingSlice'
@@ -13,13 +20,18 @@ import LoadingSpinner from '@/src/components/common/LoadingSpinner'
 import Button from '@/src/components/common/Button'
 import BookingCard from '@/src/components/booking/BookingCard'
 import PetCard from '@/src/components/pet/PetCard'
+import { useActiveMinderSession } from '@/src/context/ActiveMinderSessionContext'
 
 export default function OwnerDashboardScreen() {
   const navigation = useNavigation<NavigationProp<ParamListBase>>()
+  const stackNav = navigation.getParent<NativeStackNavigationProp<OwnerStackParamList>>()
   const dispatch = useDispatch<AppDispatch>()
   const user = useSelector((state: RootState) => state.auth.user)
+  const { activeBookingId } = useActiveMinderSession()
   const bookings = useSelector((state: RootState) => state.bookings.bookings) as BookingWithDetails[]
   const [pets, setPets] = useState<Pet[]>([])
+  /** Bookings where the current user is the minder (incoming requests). Shown here when using Owner UI (e.g. listing_type owner) or role user with a listing. */
+  const [incomingAsMinder, setIncomingAsMinder] = useState<BookingWithDetails[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   /** After first load, refetch on focus without full-screen spinner (e.g. returning from Pet Profile). */
@@ -50,6 +62,20 @@ export default function OwnerDashboardScreen() {
 
       if (bookingsError) throw bookingsError
       dispatch(setBookings((bookingsData ?? []) as BookingWithDetails[]))
+
+      const { data: incomingData, error: incomingError } = await supabase
+        .from('bookings')
+        .select('*, pet:pet_id(*), requester:requester_id(*)')
+        .eq('minder_id', user.id)
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false })
+
+      if (incomingError) {
+        console.warn('Incoming minder bookings:', incomingError)
+        setIncomingAsMinder([])
+      } else {
+        setIncomingAsMinder((incomingData ?? []) as BookingWithDetails[])
+      }
 
       const { data: petsData, error: petsError } = await supabase
         .from('pets')
@@ -93,7 +119,45 @@ export default function OwnerDashboardScreen() {
 
         {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
-        <Text style={[styles.sectionTitle, styles.sectionTitleFirst]}>Upcoming Bookings</Text>
+        {activeBookingId ? (
+          <Pressable
+            style={styles.sessionBanner}
+            onPress={() =>
+              stackNav?.navigate('Session', { bookingId: activeBookingId })
+            }
+            accessibilityRole="button"
+            accessibilityLabel="Open active GPS session"
+          >
+            <Icon name="gps-fixed" size={22} color="#1b4332" />
+            <View style={styles.sessionBannerTextWrap}>
+              <Text style={styles.sessionBannerTitle}>GPS session running</Text>
+              <Text style={styles.sessionBannerSub}>Tap to return · ends when you press End session</Text>
+            </View>
+            <Icon name="chevron-right" size={24} color="#1b4332" />
+          </Pressable>
+        ) : null}
+
+        <Text style={[styles.sectionTitle, styles.sectionTitleFirst]}>Booking requests for you</Text>
+        {incomingAsMinder.length === 0 ? (
+          <Text style={styles.empty}>No pending requests from pet owners.</Text>
+        ) : (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.horizontalList}
+          >
+            {incomingAsMinder.map(item => (
+              <View key={item.id} style={styles.bookingCardWrap}>
+                <BookingCard
+                  booking={item}
+                  onPress={() => navigation.navigate('JobDetails', { bookingId: item.id })}
+                />
+              </View>
+            ))}
+          </ScrollView>
+        )}
+
+        <Text style={styles.sectionTitle}>Upcoming Bookings</Text>
         {bookings.length === 0 ? (
           <Text style={styles.empty}>No upcoming bookings yet.</Text>
         ) : (
@@ -158,4 +222,19 @@ const styles = StyleSheet.create({
   bookingCardWrap: { width: 320, marginRight: 12 },
   empty: { color: '#7a7a7a', fontSize: 14, paddingVertical: 10 },
   addButtonWrap: { marginTop: 16 },
+  sessionBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: '#d8f3dc',
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#95d5b2',
+  },
+  sessionBannerTextWrap: { flex: 1 },
+  sessionBannerTitle: { fontSize: 16, fontWeight: '700', color: '#1b4332' },
+  sessionBannerSub: { fontSize: 13, color: '#2d6a4f', marginTop: 2 },
 })

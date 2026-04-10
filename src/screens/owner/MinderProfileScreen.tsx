@@ -47,6 +47,11 @@ export default function MinderProfileScreen({ navigation, route }: any) {
     return dmThreadId(currentUserId, minderId)
   }, [currentUserId, minderId])
 
+  const canShowMap = useMemo(
+    () => Boolean(listing?.postcode?.trim() || profile?.location?.trim()),
+    [listing?.postcode, profile?.location]
+  )
+
   useEffect(() => {
     const load = async () => {
       setLoading(true)
@@ -125,7 +130,16 @@ export default function MinderProfileScreen({ navigation, route }: any) {
         <Avatar name={profile.display_name || profile.username} size={64} />
         <Text style={styles.name}>{profile.display_name || profile.username}</Text>
         <Text style={styles.location}>{profile.location || 'Location not set'}</Text>
+        {listing?.postcode ? <Text style={styles.postcodeLine}>Postcode: {listing.postcode}</Text> : null}
         <Rating value={profile.ratings ?? 0} readonly />
+        <View style={styles.locationBtnWrap}>
+          <Button
+            label="Show location on map"
+            variant="secondary"
+            onPress={() => navigation.navigate('MinderLocationMap', { minderId })}
+            disabled={!canShowMap}
+          />
+        </View>
       </View>
 
       <Card>
@@ -207,6 +221,17 @@ const styles = StyleSheet.create({
   location: {
     color: '#666',
     marginVertical: 6,
+  },
+  postcodeLine: {
+    fontSize: 14,
+    color: '#455a64',
+    fontWeight: '600',
+    marginBottom: 6,
+  },
+  locationBtnWrap: {
+    alignSelf: 'stretch',
+    marginTop: 10,
+    paddingHorizontal: 8,
   },
   sectionTitle: {
     fontSize: 16,

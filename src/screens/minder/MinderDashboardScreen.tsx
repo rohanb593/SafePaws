@@ -3,7 +3,12 @@ import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'r
 import Icon from '@expo/vector-icons/MaterialIcons'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useDispatch, useSelector } from 'react-redux'
-import { useNavigation, type NavigationProp, type ParamListBase } from '@react-navigation/native'
+import {
+  useFocusEffect,
+  useNavigation,
+  type NavigationProp,
+  type ParamListBase,
+} from '@react-navigation/native'
 import { supabase } from '@/src/lib/supabase'
 import { fetchMinderBookings } from '@/src/hooks/useBookings'
 import { AppDispatch, RootState } from '@/src/store'
@@ -12,9 +17,11 @@ import LoadingSpinner from '@/src/components/common/LoadingSpinner'
 import BookingCard from '@/src/components/booking/BookingCard'
 import Card from '@/src/components/common/Card'
 import Rating from '@/src/components/common/Rating'
+import { useActiveMinderSession } from '@/src/context/ActiveMinderSessionContext'
 
 export default function MinderDashboardScreen() {
   const navigation = useNavigation<NavigationProp<ParamListBase>>()
+  const { activeBookingId } = useActiveMinderSession()
   const dispatch = useDispatch<AppDispatch>()
   const user = useSelector((state: RootState) => state.auth.user)
   const bookings = useSelector((state: RootState) => state.bookings.bookings) as BookingWithDetails[]
@@ -42,9 +49,14 @@ export default function MinderDashboardScreen() {
   }, [user?.id])
 
   useEffect(() => {
-    void loadBookings()
     void loadRate()
-  }, [loadBookings, loadRate])
+  }, [loadRate])
+
+  useFocusEffect(
+    useCallback(() => {
+      void loadBookings()
+    }, [loadBookings])
+  )
 
   const onRefresh = async () => {
     setRefreshing(true)
@@ -113,6 +125,22 @@ export default function MinderDashboardScreen() {
           <Rating value={user.ratings ?? 0} />
         </View>
 
+        {activeBookingId ? (
+          <Pressable
+            style={styles.sessionBanner}
+            onPress={() => navigation.navigate('Session', { bookingId: activeBookingId })}
+            accessibilityRole="button"
+            accessibilityLabel="Open active GPS session"
+          >
+            <Icon name="gps-fixed" size={22} color="#1b4332" />
+            <View style={styles.sessionBannerTextWrap}>
+              <Text style={styles.sessionBannerTitle}>GPS session running</Text>
+              <Text style={styles.sessionBannerSub}>Tap to return · ends when you press End session</Text>
+            </View>
+            <Icon name="chevron-right" size={24} color="#1b4332" />
+          </Pressable>
+        ) : null}
+
         <Text style={styles.sectionTitle}>Active / Upcoming Jobs</Text>
         {activeUpcoming.length === 0 ? (
           <Text style={styles.empty}>No confirmed jobs yet.</Text>
@@ -161,4 +189,19 @@ const styles = StyleSheet.create({
   earningsCard: { marginTop: 18 },
   earningsTitle: { fontSize: 16, fontWeight: '700', marginBottom: 8, color: '#1f2937' },
   earningsLine: { fontSize: 15, color: '#374151', marginBottom: 4 },
+  sessionBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: '#d8f3dc',
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#95d5b2',
+  },
+  sessionBannerTextWrap: { flex: 1 },
+  sessionBannerTitle: { fontSize: 16, fontWeight: '700', color: '#1b4332' },
+  sessionBannerSub: { fontSize: 13, color: '#2d6a4f', marginTop: 2 },
 })

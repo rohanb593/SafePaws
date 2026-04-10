@@ -84,6 +84,18 @@ export default function GPSTrackingScreen() {
     }
   }, [bookingId, applyCoords])
 
+  /** If Realtime is not enabled for `gps_locations`, polling still picks up minder upserts. */
+  useEffect(() => {
+    if (latitude != null && longitude != null) return
+    const interval = setInterval(() => {
+      void (async () => {
+        const last = await fetchLastLocation(bookingId)
+        if (last) applyCoords(last.latitude, last.longitude, last.updated_at)
+      })()
+    }, 8000)
+    return () => clearInterval(interval)
+  }, [bookingId, latitude, longitude, applyCoords])
+
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
       <View style={styles.header}>

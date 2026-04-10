@@ -28,13 +28,7 @@ export async function fetchOwnerBookings(dispatch: AppDispatch, ownerId: string)
 
     const { data, error } = await supabase
       .from('bookings')
-      .select(
-        `
-        *,
-        pet:pets!pet_id(*),
-        minder:profiles!minder_id(id, display_name, ratings, location, username, email, phone, role)
-      `
-      )
+      .select('*, pet:pet_id(*), minder:minder_id(*)')
       .eq('requester_id', ownerId)
       .order('start_time', { ascending: true })
 
@@ -57,13 +51,7 @@ export async function fetchMinderBookings(dispatch: AppDispatch, minderId: strin
 
     const { data, error } = await supabase
       .from('bookings')
-      .select(
-        `
-        *,
-        pet:pets!pet_id(*),
-        requester:profiles!requester_id(id, display_name, ratings, location, username, email, phone, role)
-      `
-      )
+      .select('*, pet:pet_id(*), requester:requester_id(*)')
       .eq('minder_id', minderId)
       .order('start_time', { ascending: true })
 

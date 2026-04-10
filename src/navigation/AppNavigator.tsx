@@ -15,6 +15,7 @@ import OwnerNavigator from './OwnerNavigator'
 import MinderNavigator from './MinderNavigator'
 import AdminNavigator from './AdminNavigator'
 import { User } from '../types/User'
+import { ActiveMinderSessionProvider } from '../context/ActiveMinderSessionContext'
 
 export default function AppNavigator() {
   const dispatch = useDispatch()
@@ -68,15 +69,17 @@ export default function AppNavigator() {
     <NavigationIndependentTree>
       <NavigationContainer>
         {isAuthenticated ? (
-          role === 'admin' || role === 'customer_support' ? (
-            <AdminNavigator />
-          ) : role === 'minder' && user?.listing_type === 'owner' ? (
-            <OwnerNavigator />
-          ) : role === 'minder' ? (
-            <MinderNavigator />
-          ) : (
-            <OwnerNavigator />
-          )
+          <ActiveMinderSessionProvider>
+            {role === 'admin' || role === 'customer_support' ? (
+              <AdminNavigator />
+            ) : role === 'minder' && user?.listing_type === 'owner' ? (
+              <OwnerNavigator />
+            ) : role === 'minder' ? (
+              <MinderNavigator />
+            ) : (
+              <OwnerNavigator />
+            )}
+          </ActiveMinderSessionProvider>
         ) : (
           <AuthNavigator />
         )}
