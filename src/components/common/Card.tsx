@@ -5,11 +5,11 @@
 //   style?: ViewStyle     — additional styles
 //   onPress?: () => void  — makes card tappable if provided
 import React from 'react'
-import { View, TouchableOpacity, ViewStyle, StyleSheet } from 'react-native'
+import { View, TouchableOpacity, StyleSheet, type StyleProp, type ViewStyle } from 'react-native'
 
 interface CardProps {
   children: React.ReactNode
-  style?: ViewStyle
+  style?: StyleProp<ViewStyle>
   onPress?: () => void
 }
 

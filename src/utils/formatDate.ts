@@ -29,6 +29,18 @@ export function formatDateTime(isoString: string): string {
   })
 }
 
+export function formatDuration(startIso: string, endIso: string): string {
+  const start = new Date(startIso).getTime()
+  const end = new Date(endIso).getTime()
+  if (Number.isNaN(start) || Number.isNaN(end) || end <= start) return '0m'
+  const totalMins = Math.floor((end - start) / 60_000)
+  const hours = Math.floor(totalMins / 60)
+  const mins = totalMins % 60
+  if (hours === 0) return `${mins}m`
+  if (mins === 0) return `${hours}h`
+  return `${hours}h ${mins}m`
+}
+
 export function formatRelativeTime(isoString: string): string {
   const diff = Date.now() - new Date(isoString).getTime()
   const mins = Math.floor(diff / 60_000)

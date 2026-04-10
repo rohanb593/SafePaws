@@ -4,7 +4,8 @@ import Card from '@/src/components/common/Card'
 
 interface PetCardProps {
   pet: Pet
-  onPress: () => void
+  /** Omit for a static card (e.g. profile header). */
+  onPress?: () => void
   selected?: boolean
 }
 

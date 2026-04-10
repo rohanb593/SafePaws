@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { FlatList, ScrollView, Text, View, StyleSheet } from 'react-native'
+import { ScrollView, Text, View, StyleSheet } from 'react-native'
 import { useDispatch, useSelector } from 'react-redux'
 import { useNavigation, type NavigationProp, type ParamListBase } from '@react-navigation/native'
 import { supabase } from '@/src/lib/supabase'
@@ -16,7 +16,7 @@ export default function OwnerDashboardScreen() {
   const navigation = useNavigation<NavigationProp<ParamListBase>>()
   const dispatch = useDispatch<AppDispatch>()
   const user = useSelector((state: RootState) => state.auth.user)
-  const bookings = useSelector((state: RootState) => state.bookings.bookings)
+  const bookings = useSelector((state: RootState) => state.bookings.bookings) as BookingWithDetails[]
   const [pets, setPets] = useState<Pet[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -69,38 +69,43 @@ export default function OwnerDashboardScreen() {
       {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
       <Text style={styles.sectionTitle}>Upcoming Bookings</Text>
-      <FlatList
-        horizontal
-        data={bookings as BookingWithDetails[]}
-        keyExtractor={item => item.id}
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.horizontalList}
-        ListEmptyComponent={<Text style={styles.empty}>No upcoming bookings yet.</Text>}
-        renderItem={({ item }) => (
-          <View style={styles.bookingCardWrap}>
-            <BookingCard
-              booking={item}
-              onPress={() => navigation.navigate('BookingDetails', { bookingId: item.id })}
-            />
-          </View>
-        )}
-      />
+      {bookings.length === 0 ? (
+        <Text style={styles.empty}>No upcoming bookings yet.</Text>
+      ) : (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.horizontalList}
+        >
+          {bookings.map(item => (
+            <View key={item.id} style={styles.bookingCardWrap}>
+              <BookingCard
+                booking={item}
+                onPress={() => navigation.navigate('BookingDetails', { bookingId: item.id })}
+              />
+            </View>
+          ))}
+        </ScrollView>
+      )}
 
       <Text style={styles.sectionTitle}>My Pets</Text>
-      <FlatList
-        horizontal
-        data={pets}
-        keyExtractor={item => item.id}
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.horizontalList}
-        ListEmptyComponent={<Text style={styles.empty}>No pets yet. Add your first pet below.</Text>}
-        renderItem={({ item }) => (
-          <PetCard
-            pet={item}
-            onPress={() => navigation.navigate('PetProfile', { petId: item.id })}
-          />
-        )}
-      />
+      {pets.length === 0 ? (
+        <Text style={styles.empty}>No pets yet. Add your first pet below.</Text>
+      ) : (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.horizontalList}
+        >
+          {pets.map(item => (
+            <PetCard
+              key={item.id}
+              pet={item}
+              onPress={() => navigation.navigate('PetProfile', { petId: item.id })}
+            />
+          ))}
+        </ScrollView>
+      )}
 
       <View style={styles.addButtonWrap}>
         <Button label="Add Pet" onPress={() => navigation.navigate('AddPet')} />

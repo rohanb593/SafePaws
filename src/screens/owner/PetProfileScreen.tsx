@@ -210,7 +210,7 @@ export default function PetProfileScreen() {
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
       <Text style={styles.sectionTitle}>Pet Details</Text>
-      <PetCard pet={pet} onPress={() => {}} />
+      <PetCard pet={pet} />
 
       {editingPet ? (
         <View style={styles.block}>
@@ -262,7 +262,10 @@ export default function PetProfileScreen() {
             label="Add allergy"
             value={allergyInput}
             onChangeText={setAllergyInput}
-            placeholder="Type allergy and press add"
+            placeholder="Type allergy, then Enter or Add"
+            onSubmitEditing={addAllergy}
+            returnKeyType="done"
+            blurOnSubmit={false}
           />
           <Button label="Add Allergy" onPress={addAllergy} variant="secondary" />
           <View style={styles.badgeWrap}>
