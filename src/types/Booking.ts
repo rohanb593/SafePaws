@@ -7,6 +7,7 @@ import { Pet } from './Pet'
 import { User } from './User'
 
 export type BookingStatus = 'pending' | 'confirmed' | 'cancelled' | 'completed'
+export type BookingApplicationStatus = 'pending' | 'accepted' | 'rejected' | 'withdrawn'
 
 export interface Booking {
   id: string
@@ -36,4 +37,18 @@ export interface BookingDetails {
   end_time: string
   is_recurring?: boolean
   recurring_schedule?: string
+}
+
+export interface BookingApplication {
+  id: string
+  owner_listing_id: string
+  minder_id: string
+  minder_listing_id: string | null
+  proposed_price: number
+  proposed_start_time: string
+  proposed_end_time: string
+  proposed_notes: string
+  status: BookingApplicationStatus
+  created_at: string
+  updated_at: string
 }

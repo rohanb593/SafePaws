@@ -18,7 +18,7 @@ export interface TimeSlot {
 
 export interface Calendar {
   id: string
-  user_id: string
+  minder_id: string
   available_timing: TimeSlot[]
   booked_timing: TimeSlot[]
   updated_at: string

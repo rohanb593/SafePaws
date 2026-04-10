@@ -5,7 +5,7 @@ import { User } from '../types/User'
 
 interface AuthState {
   user: User | null
-  role: 'user' | 'minder' | 'admin' | 'customer_support' | null
+  role: User['role'] | null
   isAuthenticated: boolean
   loading: boolean
   error: string | null
