@@ -8,10 +8,11 @@
 //
 // Actions: setBookings, setSelectedBooking, addBooking, updateBookingStatus, removeBooking
 import { createSlice, PayloadAction } from '@reduxjs/toolkit'
-import { Booking, BookingStatus } from '../types/Booking'
+import { Booking, BookingApplication, BookingApplicationStatus, BookingStatus } from '../types/Booking'
 
 interface BookingState {
   bookings: Booking[]
+  applications: BookingApplication[]
   selectedBooking: Booking | null
   loading: boolean
   error: string | null
@@ -19,6 +20,7 @@ interface BookingState {
 
 const initialState: BookingState = {
   bookings: [],
+  applications: [],
   selectedBooking: null,
   loading: false,
   error: null,
@@ -31,8 +33,14 @@ const bookingSlice = createSlice({
     setBookings(state, action: PayloadAction<Booking[]>) {
       state.bookings = action.payload
     },
+    setApplications(state, action: PayloadAction<BookingApplication[]>) {
+      state.applications = action.payload
+    },
     addBooking(state, action: PayloadAction<Booking>) {
       state.bookings.unshift(action.payload)
+    },
+    addApplication(state, action: PayloadAction<BookingApplication>) {
+      state.applications.unshift(action.payload)
     },
     updateBookingStatus(state, action: PayloadAction<{ id: string; status: BookingStatus }>) {
       const booking = state.bookings.find(b => b.id === action.payload.id)
@@ -40,6 +48,13 @@ const bookingSlice = createSlice({
     },
     removeBooking(state, action: PayloadAction<string>) {
       state.bookings = state.bookings.filter(b => b.id !== action.payload)
+    },
+    updateApplicationStatus(
+      state,
+      action: PayloadAction<{ id: string; status: BookingApplicationStatus }>
+    ) {
+      const application = state.applications.find(a => a.id === action.payload.id)
+      if (application) application.status = action.payload.status
     },
     setSelectedBooking(state, action: PayloadAction<Booking | null>) {
       state.selectedBooking = action.payload
@@ -55,9 +70,12 @@ const bookingSlice = createSlice({
 
 export const {
   setBookings,
+  setApplications,
   addBooking,
+  addApplication,
   updateBookingStatus,
   removeBooking,
+  updateApplicationStatus,
   setSelectedBooking,
   setLoading,
   setError,
