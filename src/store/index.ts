@@ -1,20 +1,17 @@
-// Root Redux store
-// Note: all slices wired up here
-
 import { configureStore } from '@reduxjs/toolkit'
 import authReducer from './authSlice'
-import bookingReducer from './bookingSlice'
 import chatReducer from './chatSlice'
-import listingsReducer from './listingsSlice'
 import ticketReducer from './ticketSlice'
+import listingsReducer from './listingsSlice'
+import bookingReducer from './bookingSlice'
 
 export const store = configureStore({
   reducer: {
     auth: authReducer,
-    bookings: bookingReducer,
     chat: chatReducer,
-    listings: listingsReducer,
     tickets: ticketReducer,
+    listings: listingsReducer,
+    bookings: bookingReducer,
   },
 })
 

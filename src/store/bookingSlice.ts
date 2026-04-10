@@ -1,12 +1,3 @@
-// Booking Redux slice
-//
-// State:
-//   bookings: Booking[]
-//   selectedBooking: Booking | null
-//   loading: boolean
-//   error: string | null
-//
-// Actions: setBookings, setSelectedBooking, addBooking, updateBookingStatus, removeBooking
 import { createSlice, PayloadAction } from '@reduxjs/toolkit'
 import { Booking, BookingApplication, BookingApplicationStatus, BookingStatus } from '../types/Booking'
 
@@ -32,6 +23,10 @@ const bookingSlice = createSlice({
   reducers: {
     setBookings(state, action: PayloadAction<Booking[]>) {
       state.bookings = action.payload
+      state.loading = false
+    },
+    setSelectedBooking(state, action: PayloadAction<Booking | null>) {
+      state.selectedBooking = action.payload
     },
     setApplications(state, action: PayloadAction<BookingApplication[]>) {
       state.applications = action.payload
@@ -80,5 +75,4 @@ export const {
   setLoading,
   setError,
 } = bookingSlice.actions
-
 export default bookingSlice.reducer
