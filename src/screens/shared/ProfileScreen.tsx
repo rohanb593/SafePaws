@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { useSelector } from 'react-redux'
 
 import type { RootState } from '../../store'
+import { useAuth } from '../../hooks/useAuth'
 import { supabase } from '../../lib/supabase'
 import type { User } from '../../types/User'
 import Avatar from '../../components/common/Avatar'
@@ -31,12 +32,14 @@ const DEFAULT_FORM: EditableProfileFields = {
 export default function ProfileScreen() {
   const authUser = useSelector((state: RootState) => state.auth.user)
   const currentUserId = authUser?.id ?? null
+  const { logout } = useAuth()
 
   const [profile, setProfile] = useState<User | null>(null)
   const [form, setForm] = useState<EditableProfileFields>(DEFAULT_FORM)
   const [editing, setEditing] = useState(false)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [signingOut, setSigningOut] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const isMinder = useMemo(() => profile?.role === 'minder', [profile?.role])
@@ -127,6 +130,18 @@ export default function ProfileScreen() {
     setEditing(false)
     await fetchProfile()
     setSaving(false)
+  }
+
+  const onSignOut = async () => {
+    setSigningOut(true)
+    setError(null)
+    try {
+      await logout()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not sign out.')
+    } finally {
+      setSigningOut(false)
+    }
   }
 
   if (loading) return <LoadingSpinner fullScreen />
@@ -222,6 +237,16 @@ export default function ProfileScreen() {
             <Button label="Edit" onPress={onEdit} />
           </View>
         )}
+
+        <View style={styles.signOutSection}>
+          <Button
+            label="Sign out"
+            onPress={onSignOut}
+            variant="danger"
+            loading={signingOut}
+            disabled={saving || signingOut}
+          />
+        </View>
       </ScrollView>
     </SafeAreaView>
   )
@@ -289,5 +314,9 @@ const styles = StyleSheet.create({
     color: '#c0392b',
     marginTop: 6,
     marginBottom: 4,
+  },
+  signOutSection: {
+    marginTop: 24,
+    marginBottom: 16,
   },
 })

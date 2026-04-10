@@ -11,6 +11,12 @@
     "preview": {
       "distribution": "internal"
     },
+    "standalone": {
+      "distribution": "internal",
+      "ios": {
+        "buildConfiguration": "Release"
+      }
+    },
     "production": {
       "autoIncrement": true
     }

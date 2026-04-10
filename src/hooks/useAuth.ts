@@ -5,6 +5,10 @@ import { useDispatch } from 'react-redux'
 import { supabase } from '../lib/supabase'
 import { setUser, logout as logoutAction } from '../store/authSlice'
 import { User } from '../types/User'
+import { withTimeout } from '../utils/withTimeout'
+
+const SIGN_IN_TIMEOUT_MS = 25_000
+const PROFILE_FETCH_TIMEOUT_MS = 15_000
 
 export interface RegisterInput {
   full_name: string
@@ -24,29 +28,50 @@ export function useAuth() {
     setLoading(true)
     setError(null)
 
-    const { data, error: signInError } = await supabase.auth.signInWithPassword({ email, password })
+    try {
+      // Hung requests never resolve → `finally` never ran. Time out each step.
+      const signInResult = await withTimeout(
+        supabase.auth.signInWithPassword({ email, password }),
+        SIGN_IN_TIMEOUT_MS,
+        'Sign in timed out. Check your network or Supabase URL and try again.'
+      )
+      const { data, error: signInError } = signInResult
 
-    if (signInError) {
-      setError(signInError.message)
-      setLoading(false)
+      if (signInError) {
+        setError(signInError.message)
+        return false
+      }
+
+      if (!data.user) {
+        setError('Sign in failed.')
+        return false
+      }
+
+      const profileResult = await withTimeout(
+        (async () =>
+          supabase.from('profiles').select('*').eq('id', data.user.id).maybeSingle())(),
+        PROFILE_FETCH_TIMEOUT_MS,
+        'Loading your profile timed out. Check your network and try again.'
+      )
+      const { data: profile, error: profileError } = profileResult
+
+      if (profileError) {
+        setError(profileError.message)
+        return false
+      }
+      if (!profile) {
+        setError('Profile not found. Please contact support.')
+        return false
+      }
+
+      dispatch(setUser(profile as User))
+      return true
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Sign in failed.')
       return false
-    }
-
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', data.user.id)
-      .single()
-
-    if (!profile) {
-      setError('Profile not found. Please contact support.')
+    } finally {
       setLoading(false)
-      return false
     }
-
-    dispatch(setUser(profile as User))
-    setLoading(false)
-    return true
   }
 
   async function register(input: RegisterInput): Promise<boolean> {
