@@ -44,9 +44,9 @@ VALUES
   );
 
 -- Test booking
-INSERT INTO public.bookings (id, pet_id, requester_id, minder_id, location, status, start_time, end_time, is_recurring, created_at)
+INSERT INTO public.bookings (id, pet_id, requester_id, minder_id, location, status, start_time, end_time, created_at)
 VALUES
-  ('00000000-0000-0000-0000-000000000030', '00000000-0000-0000-0000-000000000010', '00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000002', 'London', 'confirmed', now() + interval '1 day', now() + interval '2 days', false, now());
+  ('00000000-0000-0000-0000-000000000030', '00000000-0000-0000-0000-000000000010', '00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000002', 'London', 'confirmed', now() + interval '1 day', now() + interval '2 days', now());
 
 -- Test chat messages
 INSERT INTO public.chat_messages (sender_id, receiver_id, message, thread_id, created_at)

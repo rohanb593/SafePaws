@@ -1,7 +1,8 @@
 import { supabase } from '../lib/supabase'
 import { Ticket, NewTicketInput, TicketStatus } from '../types/Ticket'
-import { setTickets, addTicket, updateTicket } from '../store/ticketSlice'
+import { setTickets, addTicket, updateTicket, setLoading } from '../store/ticketSlice'
 import type { AppDispatch } from '../store'
+import { sendTicketDetailsAsSupportChatMessage } from './useChat'
 
 export async function fetchUserTickets(
   dispatch: AppDispatch,
@@ -20,16 +21,28 @@ export async function fetchUserTickets(
   dispatch(setTickets((data ?? []) as Ticket[]))
 }
 
-export async function fetchAllTickets(dispatch: AppDispatch): Promise<void> {
+export async function fetchAllTickets(
+  dispatch: AppDispatch,
+  options?: { silent?: boolean }
+): Promise<void> {
+  const silent = options?.silent ?? false
+  if (!silent) {
+    dispatch(setLoading(true))
+  }
+
   const { data, error } = await supabase
     .from('tickets')
-    .select('*, user:by_user(display_name, email)')
+    .select('*, user:by_user(display_name, email, username)')
     .order('created_at', { ascending: false })
 
   if (error) {
     console.warn('[useTickets] fetchAllTickets', error.message)
+    if (!silent) {
+      dispatch(setLoading(false))
+    }
     return
   }
+
   dispatch(setTickets((data ?? []) as Ticket[]))
 }
 
@@ -49,6 +62,11 @@ export async function createTicket(
   }
   const created = data as Ticket
   dispatch(addTicket(created))
+  try {
+    await sendTicketDetailsAsSupportChatMessage(dispatch, created)
+  } catch (e) {
+    console.warn('[useTickets] support chat ticket message', e)
+  }
   return created
 }
 

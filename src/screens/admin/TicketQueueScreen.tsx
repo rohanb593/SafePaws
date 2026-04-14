@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
 import {
   FlatList,
   RefreshControl,
@@ -7,7 +7,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native'
-import { useNavigation } from '@react-navigation/native'
+import { useFocusEffect, useNavigation } from '@react-navigation/native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useDispatch, useSelector } from 'react-redux'
 
@@ -16,9 +16,12 @@ import { fetchAllTickets } from '../../hooks/useTickets'
 import { Ticket, TicketStatus } from '../../types/Ticket'
 import Badge from '../../components/common/Badge'
 import LoadingSpinner from '../../components/common/LoadingSpinner'
+import ScreenHeader from '../../components/common/ScreenHeader'
 import { formatRelativeTime } from '../../utils/formatDate'
+import { supabase } from '../../lib/supabase'
 
-const TABS: { label: string; value: TicketStatus | 'all' }[] = [
+const TABS: { label: string; value: TicketStatus | 'all' | 'open' }[] = [
+  { label: 'Open', value: 'open' },
   { label: 'All', value: 'all' },
   { label: 'Pending', value: 'pending' },
   { label: 'Opened', value: 'opened' },
@@ -42,24 +45,54 @@ function statusVariant(s: string) {
 export default function TicketQueueScreen() {
   const navigation = useNavigation()
   const dispatch = useDispatch<AppDispatch>()
+  const authUserId = useSelector((state: RootState) => state.auth.user?.id)
   const tickets = useSelector((state: RootState) => state.tickets.tickets)
   const loading = useSelector((state: RootState) => state.tickets.loading)
 
-  const [activeTab, setActiveTab] = useState<TicketStatus | 'all'>('all')
+  const [activeTab, setActiveTab] = useState<TicketStatus | 'all' | 'open'>('open')
   const [refreshing, setRefreshing] = useState(false)
+  const skipTicketSpinnerRef = useRef(false)
 
   useEffect(() => {
-    void fetchAllTickets(dispatch)
+    skipTicketSpinnerRef.current = false
+  }, [authUserId])
+
+  useFocusEffect(
+    useCallback(() => {
+      void fetchAllTickets(dispatch, { silent: skipTicketSpinnerRef.current })
+      skipTicketSpinnerRef.current = true
+    }, [dispatch])
+  )
+
+  useEffect(() => {
+    const channel = supabase
+      .channel('staff-tickets-realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'tickets' },
+        () => {
+          void fetchAllTickets(dispatch, { silent: true })
+        }
+      )
+      .subscribe()
+
+    return () => {
+      void supabase.removeChannel(channel)
+    }
   }, [dispatch])
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true)
-    await fetchAllTickets(dispatch)
+    await fetchAllTickets(dispatch, { silent: true })
     setRefreshing(false)
   }, [dispatch])
 
   const filtered = tickets
-    .filter((t) => activeTab === 'all' || t.status === activeTab)
+    .filter((t) => {
+      if (activeTab === 'all') return true
+      if (activeTab === 'open') return t.status !== 'closed'
+      return t.status === activeTab
+    })
     .slice()
     .sort(
       (a, b) =>
@@ -76,6 +109,11 @@ export default function TicketQueueScreen() {
         <Badge label={item.priority} variant={priorityVariant(item.priority)} />
       </View>
       <Text style={styles.queryType} numberOfLines={1}>{item.query_type}</Text>
+      {item.user && (
+        <Text style={styles.submitter} numberOfLines={1}>
+          {item.user.display_name} · {item.user.email}
+        </Text>
+      )}
       <Text style={styles.description} numberOfLines={2}>{item.issue_description}</Text>
       <View style={styles.cardBottom}>
         <Badge label={item.status} variant={statusVariant(item.status)} />
@@ -85,8 +123,11 @@ export default function TicketQueueScreen() {
   )
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
-      <Text style={styles.title}>Ticket Queue</Text>
+    <SafeAreaView style={styles.safe} edges={['top', 'left', 'right', 'bottom']}>
+      <View style={styles.screenPad}>
+        <ScreenHeader title="Support tickets" />
+        <Text style={styles.subtitle}>Open requests and member context</Text>
+      </View>
 
       <View style={styles.tabs}>
         {TABS.map((tab) => (
@@ -103,7 +144,9 @@ export default function TicketQueueScreen() {
       </View>
 
       {loading && !refreshing ? (
-        <LoadingSpinner fullScreen />
+        <View style={styles.loaderFill}>
+          <LoadingSpinner />
+        </View>
       ) : (
         <FlatList
           data={filtered}
@@ -121,9 +164,10 @@ export default function TicketQueueScreen() {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#f6f8f7' },
-  title: { fontSize: 24, fontWeight: '700', color: '#1b4332', paddingHorizontal: 16, paddingTop: 16, paddingBottom: 8 },
-  tabs: { flexDirection: 'row', paddingHorizontal: 16, gap: 8, marginBottom: 8 },
+  safe: { flex: 1, backgroundColor: '#f8f9fb' },
+  screenPad: { paddingHorizontal: 20, paddingTop: 8 },
+  subtitle: { fontSize: 14, color: '#666', marginTop: 4, marginBottom: 12 },
+  tabs: { flexDirection: 'row', paddingHorizontal: 20, gap: 8, marginBottom: 8 },
   tab: {
     paddingHorizontal: 14,
     paddingVertical: 7,
@@ -133,7 +177,8 @@ const styles = StyleSheet.create({
   tabActive: { backgroundColor: '#2E7D32' },
   tabText: { fontSize: 13, color: '#555', fontWeight: '600' },
   tabTextActive: { color: '#fff' },
-  list: { paddingHorizontal: 16, paddingBottom: 24 },
+  loaderFill: { flex: 1, justifyContent: 'center', minHeight: 200 },
+  list: { paddingHorizontal: 20, paddingBottom: 24 },
   card: {
     backgroundColor: '#fff',
     borderRadius: 12,
@@ -147,6 +192,7 @@ const styles = StyleSheet.create({
   },
   cardTop: { flexDirection: 'row', gap: 8 },
   queryType: { fontSize: 15, fontWeight: '700', color: '#1b4332' },
+  submitter: { fontSize: 13, color: '#1565c0', fontWeight: '600' },
   description: { fontSize: 13, color: '#666', lineHeight: 18 },
   cardBottom: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   time: { fontSize: 12, color: '#999' },

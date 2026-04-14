@@ -1,12 +1,13 @@
 import { TimeSlot } from '@/src/types/Calendar'
-import { View, Text, Pressable, StyleSheet } from 'react-native'
+import { View, Text, Pressable, StyleSheet, Alert } from 'react-native'
 import { useEffect, useMemo, useState } from 'react'
 
 interface CalendarPickerProps {
   availableSlots: TimeSlot[]
+  /** Inclusive range (local midnight). Start ≤ end. */
   selectedStart: Date | null
   selectedEnd: Date | null
-  onChange: (start: Date, end: Date) => void
+  onRangeChange: (start: Date, end: Date) => void
 }
 
 const WEEKDAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
@@ -16,8 +17,8 @@ function startOfLocalDay(d: Date): Date {
   return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0, 0)
 }
 
-function endOfLocalDay(d: Date): Date {
-  return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59, 999)
+function compareLocalDay(a: Date, b: Date): number {
+  return startOfLocalDay(a).getTime() - startOfLocalDay(b).getTime()
 }
 
 function sameLocalDay(a: Date, b: Date): boolean {
@@ -60,12 +61,29 @@ function slotMatchesCalendarDay(
 function isDayAvailable(year: number, month: number, day: number, slots: TimeSlot[]): boolean {
   if (isCalendarDateBeforeToday(year, month, day)) return false
 
-  // Minder has not set availability yet — still allow owners to pick dates (minder confirms in app).
   if (!slots || slots.length === 0) return true
 
   const d = new Date(year, month, day)
   const weekday = WEEKDAY_NAMES[d.getDay()]
   return slots.some(slot => slotMatchesCalendarDay(slot, year, month, day, weekday))
+}
+
+/** Every calendar day in [start, end] (inclusive, local) must be available. */
+function isEveryDayInRangeAvailable(
+  rangeStart: Date,
+  rangeEnd: Date,
+  slots: TimeSlot[]
+): boolean {
+  const a = startOfLocalDay(rangeStart)
+  const b = startOfLocalDay(rangeEnd)
+  let cur = new Date(a)
+  while (cur.getTime() <= b.getTime()) {
+    if (!isDayAvailable(cur.getFullYear(), cur.getMonth(), cur.getDate(), slots)) {
+      return false
+    }
+    cur = new Date(cur.getFullYear(), cur.getMonth(), cur.getDate() + 1)
+  }
+  return true
 }
 
 function mondayIndexFromSunday(dayIndex: number): number {
@@ -76,18 +94,17 @@ export default function CalendarPicker({
   availableSlots,
   selectedStart,
   selectedEnd,
-  onChange,
+  onRangeChange,
 }: CalendarPickerProps) {
   const today = new Date()
   const [viewYear, setViewYear] = useState(today.getFullYear())
   const [viewMonth, setViewMonth] = useState(today.getMonth())
-  const [tempStart, setTempStart] = useState<Date | null>(selectedStart)
-  const [tempEnd, setTempEnd] = useState<Date | null>(selectedEnd)
 
   useEffect(() => {
-    setTempStart(selectedStart)
-    setTempEnd(selectedEnd)
-  }, [selectedStart, selectedEnd])
+    if (!selectedStart) return
+    setViewYear(selectedStart.getFullYear())
+    setViewMonth(selectedStart.getMonth())
+  }, [selectedStart])
 
   const { daysInMonth, leadingBlanks, monthLabel } = useMemo(() => {
     const first = new Date(viewYear, viewMonth, 1)
@@ -126,35 +143,37 @@ export default function CalendarPicker({
   }
 
   const onPressDay = (day: number) => {
-    const cellDate = startOfLocalDay(new Date(viewYear, viewMonth, day))
     if (!isDayAvailable(viewYear, viewMonth, day, availableSlots)) return
+    const cellDate = startOfLocalDay(new Date(viewYear, viewMonth, day))
 
-    if (!tempStart || (tempStart && tempEnd)) {
-      setTempStart(cellDate)
-      setTempEnd(null)
+    if (!selectedStart || !selectedEnd) {
+      onRangeChange(cellDate, cellDate)
       return
     }
 
-    let rangeStart = tempStart
-    let rangeEnd = cellDate
-    if (rangeEnd.getTime() < rangeStart.getTime()) {
-      const swap = rangeStart
-      rangeStart = rangeEnd
-      rangeEnd = swap
-    }
-    if (sameLocalDay(rangeStart, rangeEnd)) {
-      const s = startOfLocalDay(cellDate)
-      const e = endOfLocalDay(cellDate)
-      setTempStart(s)
-      setTempEnd(e)
-      onChange(s, e)
+    const singleDaySelected = sameLocalDay(selectedStart, selectedEnd)
+
+    if (singleDaySelected) {
+      if (sameLocalDay(cellDate, selectedStart)) return
+      const lo = compareLocalDay(cellDate, selectedStart) < 0 ? cellDate : selectedStart
+      const hi = compareLocalDay(cellDate, selectedStart) < 0 ? selectedStart : cellDate
+      if (!isEveryDayInRangeAvailable(lo, hi, availableSlots)) {
+        Alert.alert(
+          'Unavailable dates',
+          'Every day in your range must be available. Choose different days or a shorter range.'
+        )
+        return
+      }
+      onRangeChange(lo, hi)
       return
     }
 
-    setTempStart(rangeStart)
-    setTempEnd(rangeEnd)
-    onChange(startOfLocalDay(rangeStart), endOfLocalDay(rangeEnd))
+    // Range already spans multiple days — start a new single-day selection
+    onRangeChange(cellDate, cellDate)
   }
+
+  const rangeLo = selectedStart && selectedEnd ? startOfLocalDay(selectedStart) : null
+  const rangeHi = selectedStart && selectedEnd ? startOfLocalDay(selectedEnd) : null
 
   const renderCell = (cell: { type: 'blank' } | { type: 'day'; day: number }, index: number) => {
     if (cell.type === 'blank') {
@@ -164,32 +183,32 @@ export default function CalendarPicker({
     const { day } = cell
     const available = isDayAvailable(viewYear, viewMonth, day, availableSlots)
     const cellDate = startOfLocalDay(new Date(viewYear, viewMonth, day))
-    const isStart = tempStart && sameLocalDay(cellDate, tempStart)
-    const isEnd = tempEnd && sameLocalDay(cellDate, tempEnd)
-    const inRange =
-      tempStart &&
-      tempEnd &&
-      cellDate.getTime() > tempStart.getTime() &&
-      cellDate.getTime() < tempEnd.getTime()
 
-    const cellStyle = [
-      styles.dayCell,
-      available && styles.dayAvailable,
-      inRange && styles.dayInRange,
-      isStart && styles.dayRangeEnd,
-      isEnd && styles.dayRangeEnd,
-    ]
+    let inRange = false
+    let isEdge = false
+    if (rangeLo && rangeHi && available) {
+      const t = cellDate.getTime()
+      if (t >= rangeLo.getTime() && t <= rangeHi.getTime()) {
+        inRange = true
+        isEdge = t === rangeLo.getTime() || t === rangeHi.getTime()
+      }
+    }
 
     return (
       <Pressable
         key={`d-${day}`}
         onPress={() => onPressDay(day)}
         disabled={!available}
-        style={({ pressed }) => [cellStyle, pressed && available && styles.dayPressed]}
+        style={({ pressed }) => [
+          styles.dayCell,
+          available && styles.dayAvailable,
+          inRange && styles.dayInRange,
+          inRange && isEdge && styles.dayRangeEdge,
+          pressed && available && styles.dayPressed,
+        ]}
       >
         <Text style={[styles.dayNum, !available && styles.dayMuted]}>{day}</Text>
-        {isStart ? <Text style={styles.tag}>Start</Text> : null}
-        {isEnd && !isStart ? <Text style={styles.tag}>End</Text> : null}
+        {inRange && isEdge ? <Text style={styles.tag}>✓</Text> : null}
       </Pressable>
     )
   }
@@ -248,10 +267,10 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   dayAvailable: { backgroundColor: '#E8F5E9' },
-  dayInRange: { backgroundColor: '#E3F2FD' },
-  dayRangeEnd: { backgroundColor: '#C8E6C9' },
+  dayInRange: { backgroundColor: '#C8E6C9' },
+  dayRangeEdge: { borderWidth: 2, borderColor: '#2E7D32' },
   dayPressed: { opacity: 0.85 },
   dayNum: { fontSize: 15, fontWeight: '600', color: '#222' },
   dayMuted: { color: '#bbb', fontWeight: '400' },
-  tag: { fontSize: 9, fontWeight: '700', color: '#1B5E20', marginTop: 2 },
+  tag: { fontSize: 10, fontWeight: '800', color: '#1B5E20', marginTop: 1 },
 })

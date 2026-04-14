@@ -105,7 +105,7 @@ ON CONFLICT (id) DO NOTHING;
 -- ─── Booking ──────────────────────────────────────────────────────────────────
 INSERT INTO public.bookings (
   id, pet_id, requester_id, minder_id, location,
-  status, start_time, end_time, is_recurring, recurring_schedule, created_at
+  status, start_time, end_time, created_at
 )
 VALUES
   (
@@ -117,8 +117,6 @@ VALUES
     'confirmed',
     now() + interval '2 days',
     now() + interval '2 days' + interval '4 hours',
-    false,
-    NULL,
     now() - interval '1 day'
   )
 ON CONFLICT (id) DO NOTHING;

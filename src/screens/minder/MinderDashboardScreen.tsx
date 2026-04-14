@@ -88,6 +88,15 @@ export default function MinderDashboardScreen() {
     [bookings, monthStart]
   )
 
+  const recentlyFinished = useMemo(
+    () =>
+      [...bookings]
+        .filter(b => b.status === 'completed')
+        .sort((a, b) => +new Date(b.end_time) - +new Date(a.end_time))
+        .slice(0, 15),
+    [bookings]
+  )
+
   const estimatedEarnings = useMemo(() => {
     if (!hourlyRate) return 0
     return bookings
@@ -159,6 +168,26 @@ export default function MinderDashboardScreen() {
           ))
         )}
 
+        <Text style={styles.sectionTitle}>Recently finished</Text>
+        {recentlyFinished.length === 0 ? (
+          <Text style={styles.empty}>No completed jobs yet.</Text>
+        ) : (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.horizontalList}
+          >
+            {recentlyFinished.map(item => (
+              <View key={item.id} style={styles.bookingCardWrap}>
+                <BookingCard
+                  booking={item}
+                  onPress={() => navigation.navigate('JobDetails', { bookingId: item.id })}
+                />
+              </View>
+            ))}
+          </ScrollView>
+        )}
+
         <Card style={styles.earningsCard}>
           <Text style={styles.earningsTitle}>Earnings Summary</Text>
           <Text style={styles.earningsLine}>Completed this month: {completedThisMonth}</Text>
@@ -185,6 +214,8 @@ const styles = StyleSheet.create({
   ratingRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 },
   ratingLabel: { fontSize: 14, color: '#444' },
   sectionTitle: { fontSize: 18, fontWeight: '700', marginTop: 20, marginBottom: 8, color: '#111' },
+  horizontalList: { paddingVertical: 4 },
+  bookingCardWrap: { width: 320, marginRight: 12 },
   empty: { color: '#777', marginBottom: 8 },
   earningsCard: { marginTop: 18 },
   earningsTitle: { fontSize: 16, fontWeight: '700', marginBottom: 8, color: '#1f2937' },

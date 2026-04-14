@@ -1,6 +1,6 @@
 import { useRoute, useNavigation } from '@react-navigation/native'
 import { useState, useEffect, useCallback, useMemo } from 'react'
-import { ScrollView, View, Text, Switch, StyleSheet, Alert } from 'react-native'
+import { ScrollView, View, Text, StyleSheet, Alert } from 'react-native'
 import { useDispatch, useSelector } from 'react-redux'
 import { AppDispatch, RootState } from '@/src/store'
 import { createBooking } from '@/src/hooks/useBookings'
@@ -14,7 +14,9 @@ import Card from '@/src/components/common/Card'
 import Avatar from '@/src/components/common/Avatar'
 import PetCard from '@/src/components/pet/PetCard'
 import CalendarPicker from '@/src/components/booking/CalendarPicker'
-import { formatDate } from '@/src/utils/formatDate'
+import TimeStepper from '@/src/components/common/TimeStepper'
+import { formatDateRange } from '@/src/utils/formatDate'
+import { hhmmToMinutes, snapHHmm } from '@/src/utils/timeMinutes'
 import { formatPrice, formatPricePerHour } from '@/src/utils/formatPrice'
 import { supabase } from '@/src/lib/supabase'
 import {
@@ -24,6 +26,13 @@ import {
 
 interface RouteParams {
   minderId: string
+}
+
+function combineDayWithTime(day: Date, hhmm: string): Date {
+  const mins = hhmmToMinutes(snapHHmm(hhmm))
+  const d = new Date(day.getFullYear(), day.getMonth(), day.getDate(), 0, 0, 0, 0)
+  d.setHours(Math.floor(mins / 60), mins % 60, 0, 0)
+  return d
 }
 
 export default function BookingRequestScreen() {
@@ -40,11 +49,11 @@ export default function BookingRequestScreen() {
   /** Comma-separated from `listings.animal` — restricts which owner pets can be booked. */
   const [minderListingAnimal, setMinderListingAnimal] = useState<string | null>(null)
   const [minderCalendar, setMinderCalendar] = useState<Calendar | null>(null)
-  const [selectedStart, setSelectedStart] = useState<Date | null>(null)
-  const [selectedEnd, setSelectedEnd] = useState<Date | null>(null)
+  const [rangeStart, setRangeStart] = useState<Date | null>(null)
+  const [rangeEnd, setRangeEnd] = useState<Date | null>(null)
+  const [startTimeHHmm, setStartTimeHHmm] = useState(() => snapHHmm('09:00'))
+  const [endTimeHHmm, setEndTimeHHmm] = useState(() => snapHHmm('17:00'))
   const [location, setLocation] = useState('')
-  const [isRecurring, setIsRecurring] = useState(false)
-  const [recurringSchedule, setRecurringSchedule] = useState('')
   const [loadingData, setLoadingData] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -126,12 +135,35 @@ export default function BookingRequestScreen() {
     }
   }, [eligiblePets, selectedPetId])
 
+  const bookingStart = useMemo(() => {
+    if (!rangeStart) return null
+    return combineDayWithTime(rangeStart, startTimeHHmm)
+  }, [rangeStart, startTimeHHmm])
+
+  const bookingEnd = useMemo(() => {
+    if (!rangeEnd) return null
+    return combineDayWithTime(rangeEnd, endTimeHHmm)
+  }, [rangeEnd, endTimeHHmm])
+
+  const timeRangeError = useMemo(() => {
+    if (!bookingStart || !bookingEnd) return null
+    if (bookingEnd.getTime() <= bookingStart.getTime()) {
+      return 'End date and time must be after the start date and time.'
+    }
+    return null
+  }, [bookingStart, bookingEnd])
+
+  const multiDayRange = useMemo(() => {
+    if (!rangeStart || !rangeEnd) return false
+    return (
+      rangeStart.getFullYear() !== rangeEnd.getFullYear() ||
+      rangeStart.getMonth() !== rangeEnd.getMonth() ||
+      rangeStart.getDate() !== rangeEnd.getDate()
+    )
+  }, [rangeStart, rangeEnd])
+
   const isFormValid = Boolean(
-    selectedPetId &&
-      selectedStart &&
-      selectedEnd &&
-      location.trim() &&
-      (!isRecurring || recurringSchedule.trim())
+    selectedPetId && rangeStart && rangeEnd && bookingStart && bookingEnd && location.trim() && !timeRangeError
   )
 
   const handleSubmit = async () => {
@@ -146,10 +178,8 @@ export default function BookingRequestScreen() {
         requester_id: user.id,
         minder_id: minderId,
         location: location.trim(),
-        start_time: selectedStart!.toISOString(),
-        end_time: selectedEnd!.toISOString(),
-        is_recurring: isRecurring,
-        recurring_schedule: isRecurring ? recurringSchedule.trim() : null,
+        start_time: bookingStart!.toISOString(),
+        end_time: bookingEnd!.toISOString(),
       }
 
       const result = await createBooking(dispatch, booking)
@@ -170,8 +200,8 @@ export default function BookingRequestScreen() {
   if (loadingData) return <LoadingSpinner fullScreen />
 
   const estimatedHours =
-    selectedStart && selectedEnd
-      ? (selectedEnd.getTime() - selectedStart.getTime()) / (1000 * 60 * 60)
+    bookingStart && bookingEnd
+      ? (bookingEnd.getTime() - bookingStart.getTime()) / (1000 * 60 * 60)
       : 0
   const estimatedPrice = estimatedHours * minderHourlyRate
 
@@ -227,43 +257,49 @@ export default function BookingRequestScreen() {
         )}
       </ScrollView>
 
-      <Text style={styles.sectionTitle}>2. Select your dates</Text>
+      <Text style={styles.sectionTitle}>2. Choose dates</Text>
+      <Text style={styles.helperText}>
+        Tap a day to select it. Tap a second day to book multiple days in a row (every day in between must be
+        available). Tap again after a range to start over.
+      </Text>
       <CalendarPicker
         availableSlots={minderCalendar?.available_timing ?? []}
-        selectedStart={selectedStart}
-        selectedEnd={selectedEnd}
-        onChange={(start, end) => {
-          setSelectedStart(start)
-          setSelectedEnd(end)
+        selectedStart={rangeStart}
+        selectedEnd={rangeEnd}
+        onRangeChange={(start, end) => {
+          setRangeStart(start)
+          setRangeEnd(end)
         }}
       />
-      {selectedStart && selectedEnd ? (
-        <Text style={styles.rangeHint}>
-          {formatDate(selectedStart.toISOString())} to {formatDate(selectedEnd.toISOString())}
-        </Text>
-      ) : null}
 
-      <Text style={styles.sectionTitle}>3. Location</Text>
+      <Text style={styles.sectionTitle}>3. Start and end time</Text>
+      {rangeStart && rangeEnd ? (
+        <>
+          {multiDayRange ? (
+            <Text style={styles.helperText}>
+              Start time applies to the first day; end time applies to the last day of your range.
+            </Text>
+          ) : null}
+          <TimeStepper label="Start time" value={startTimeHHmm} onChange={setStartTimeHHmm} />
+          <TimeStepper label="End time" value={endTimeHHmm} onChange={setEndTimeHHmm} />
+          {bookingStart && bookingEnd ? (
+            <Text style={styles.rangeHint}>
+              {formatDateRange(bookingStart.toISOString(), bookingEnd.toISOString())}
+            </Text>
+          ) : null}
+          {timeRangeError ? <Text style={styles.timeError}>{timeRangeError}</Text> : null}
+        </>
+      ) : (
+        <Text style={styles.muted}>Select at least one day above to set times (15-minute steps).</Text>
+      )}
+
+      <Text style={styles.sectionTitle}>4. Location</Text>
       <Input
         label="Booking location"
         placeholder="Enter booking location"
         value={location}
         onChangeText={setLocation}
       />
-
-      <View style={styles.recurringRow}>
-        <Text style={styles.sectionTitleInline}>4. Recurring booking?</Text>
-        <Switch value={isRecurring} onValueChange={setIsRecurring} />
-      </View>
-
-      {isRecurring ? (
-        <Input
-          label="Schedule"
-          placeholder="e.g. Every Monday 9am"
-          value={recurringSchedule}
-          onChangeText={setRecurringSchedule}
-        />
-      ) : null}
 
       {estimatedPrice > 0 ? (
         <Card style={styles.priceCard}>
@@ -293,7 +329,6 @@ const styles = StyleSheet.create({
   minderName: { fontSize: 18, fontWeight: '700', color: '#1a1a1a' },
   minderLoc: { fontSize: 14, color: '#666', marginTop: 4 },
   sectionTitle: { fontSize: 18, fontWeight: '700', marginTop: 20, marginBottom: 10, color: '#1a1a1a' },
-  sectionTitleInline: { fontSize: 18, fontWeight: '700', flex: 1, color: '#1a1a1a' },
   hScroll: { marginBottom: 8 },
   hScrollContent: { paddingVertical: 4 },
   muted: { color: '#888', fontSize: 14, paddingVertical: 8 },
@@ -310,14 +345,9 @@ const styles = StyleSheet.create({
     maxWidth: 340,
     lineHeight: 20,
   },
-  rangeHint: { fontSize: 14, color: '#555', marginTop: 8, marginBottom: 8 },
-  recurringRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 16,
-    marginBottom: 8,
-    gap: 12,
-  },
+  helperText: { fontSize: 13, color: '#555', marginBottom: 10, lineHeight: 18 },
+  rangeHint: { fontSize: 14, color: '#333', marginTop: 4, marginBottom: 8, fontWeight: '600' },
+  timeError: { fontSize: 13, color: '#c0392b', marginBottom: 8 },
   priceCard: { backgroundColor: '#E3F2FD', marginTop: 8 },
   priceTitle: { fontWeight: '700', marginBottom: 6, color: '#1565C0' },
   priceLine: { fontSize: 16, color: '#0D47A1', fontWeight: '600' },

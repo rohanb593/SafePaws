@@ -18,6 +18,10 @@
     "build:android:standalone": "eas build --platform android --profile standalone",
     "build:local:ios": "eas build --platform ios --profile production --local",
     "build:local:android": "eas build --platform android --profile production --local",
+    "prebuild:clean": "expo prebuild --clean",
+    "rebuild": "expo prebuild --clean --platform ios && expo run:ios",
+    "rebuild:device": "expo prebuild --clean --platform ios && expo run:ios --device",
+    "rebuild:android": "expo prebuild --clean --platform android && expo run:android",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

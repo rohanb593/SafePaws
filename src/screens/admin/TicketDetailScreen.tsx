@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 import {
   Alert,
   ScrollView,
@@ -6,18 +6,21 @@ import {
   Text,
   View,
 } from 'react-native'
-import { useNavigation, useRoute } from '@react-navigation/native'
+import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useDispatch, useSelector } from 'react-redux'
 
 import { AppDispatch, RootState } from '../../store'
 import { updateTicketStatus } from '../../hooks/useTickets'
+import { updateTicket } from '../../store/ticketSlice'
 import { Ticket, TicketStatus } from '../../types/Ticket'
 import { supabase } from '../../lib/supabase'
 import Badge from '../../components/common/Badge'
 import Button from '../../components/common/Button'
 import LoadingSpinner from '../../components/common/LoadingSpinner'
+import UserHistorySection from '../../components/admin/UserHistorySection'
 import { formatRelativeTime, formatDateTime } from '../../utils/formatDate'
+import { getSupportThreadIdForCustomer } from '../../utils/threadId'
 
 type SubmitterProfile = { display_name: string; email: string; username: string }
 
@@ -44,29 +47,70 @@ export default function TicketDetailScreen() {
     }
   }, [ticket])
 
+  const loadTicketFromServer = useCallback(async () => {
+    const { data, error } = await supabase
+      .from('tickets')
+      .select('*, user:by_user(display_name, email, username)')
+      .eq('id', ticketId)
+      .maybeSingle()
+
+    if (error || !data) {
+      setLoading(false)
+      return
+    }
+
+    const row = data as Ticket & { user?: SubmitterProfile }
+    setLocalTicket(row as Ticket)
+    if (row.user) setSubmitter(row.user)
+    else {
+      const { data: p } = await supabase
+        .from('profiles')
+        .select('display_name, email, username')
+        .eq('id', row.by_user)
+        .maybeSingle()
+      if (p) setSubmitter(p)
+    }
+    dispatch(
+      updateTicket({
+        id: row.id,
+        status: row.status,
+        priority: row.priority,
+        query_type: row.query_type,
+        issue_description: row.issue_description,
+        updated_at: row.updated_at,
+        category: row.category,
+      })
+    )
+    setLoading(false)
+  }, [ticketId, dispatch])
+
+  useFocusEffect(
+    useCallback(() => {
+      void loadTicketFromServer()
+    }, [loadTicketFromServer])
+  )
+
   useEffect(() => {
-    void (async () => {
-      if (!ticket) {
-        const { data } = await supabase
-          .from('tickets')
-          .select('*, user:by_user(display_name, email, username)')
-          .eq('id', ticketId)
-          .single()
-        if (data) {
-          setLocalTicket(data as Ticket)
-          setSubmitter((data as any).user)
+    const channel = supabase
+      .channel(`ticket-detail-rt-${ticketId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'tickets',
+          filter: `id=eq.${ticketId}`,
+        },
+        () => {
+          void loadTicketFromServer()
         }
-        setLoading(false)
-      } else {
-        const { data } = await supabase
-          .from('profiles')
-          .select('display_name, email, username')
-          .eq('id', ticket.by_user)
-          .single()
-        if (data) setSubmitter(data)
-      }
-    })()
-  }, [ticketId, ticket])
+      )
+      .subscribe()
+
+    return () => {
+      void supabase.removeChannel(channel)
+    }
+  }, [ticketId, loadTicketFromServer])
 
   const changeStatus = async (status: TicketStatus) => {
     setUpdating(true)
@@ -78,7 +122,7 @@ export default function TicketDetailScreen() {
   const handleMessageUser = () => {
     if (!localTicket || !currentUser) return
     ;(navigation as any).navigate('Chat', {
-      threadId: `support_${ticketId}`,
+      threadId: getSupportThreadIdForCustomer(localTicket.by_user),
       otherUserId: localTicket.by_user,
     })
   }
@@ -121,6 +165,8 @@ export default function TicketDetailScreen() {
             <Text style={styles.sectionSub}>{submitter.email}</Text>
           </View>
         )}
+
+        <UserHistorySection userId={localTicket.by_user} excludeTicketId={ticketId} />
 
         <View style={styles.section}>
           <Text style={styles.sectionLabel}>Timestamps</Text>

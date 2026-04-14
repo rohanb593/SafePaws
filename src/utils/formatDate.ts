@@ -11,10 +11,19 @@ export function formatTime(isoString: string): string {
 export function formatDateRange(start: string, end: string): string {
   const s = new Date(start)
   const e = new Date(end)
-  const datePart = s.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })
   const startTime = s.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
   const endTime = e.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
-  return `${datePart}, ${startTime} – ${endTime}`
+  const sameDay =
+    s.getFullYear() === e.getFullYear() &&
+    s.getMonth() === e.getMonth() &&
+    s.getDate() === e.getDate()
+  if (sameDay) {
+    const datePart = s.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })
+    return `${datePart}, ${startTime} – ${endTime}`
+  }
+  const dpS = s.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })
+  const dpE = e.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })
+  return `${dpS}, ${startTime} – ${dpE}, ${endTime}`
 }
 
 export function formatDateTime(isoString: string): string {

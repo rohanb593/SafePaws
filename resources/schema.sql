@@ -10,8 +10,6 @@ CREATE TABLE public.bookings (
   status USER-DEFINED NOT NULL DEFAULT 'pending'::booking_status,
   start_time timestamp with time zone NOT NULL,
   end_time timestamp with time zone NOT NULL,
-  is_recurring boolean NOT NULL DEFAULT false,
-  recurring_schedule text,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
   CONSTRAINT bookings_pkey PRIMARY KEY (id),
   CONSTRAINT bookings_pet_id_fkey FOREIGN KEY (pet_id) REFERENCES public.pets(id),

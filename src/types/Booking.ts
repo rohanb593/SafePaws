@@ -18,8 +18,6 @@ export interface Booking {
   status: BookingStatus
   start_time: string
   end_time: string
-  is_recurring: boolean
-  recurring_schedule: string | null
   created_at: string
 }
 
@@ -35,8 +33,6 @@ export interface BookingDetails {
   location: string
   start_time: string
   end_time: string
-  is_recurring?: boolean
-  recurring_schedule?: string
 }
 
 export interface BookingApplication {

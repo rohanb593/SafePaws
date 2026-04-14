@@ -32,6 +32,8 @@ export default function OwnerDashboardScreen() {
   const [pets, setPets] = useState<Pet[]>([])
   /** Bookings where the current user is the minder (incoming requests). Shown here when using Owner UI (e.g. listing_type owner) or role user with a listing. */
   const [incomingAsMinder, setIncomingAsMinder] = useState<BookingWithDetails[]>([])
+  const [recentFinished, setRecentFinished] = useState<BookingWithDetails[]>([])
+  const [bookingTab, setBookingTab] = useState<'upcoming' | 'recent'>('upcoming')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   /** After first load, refetch on focus without full-screen spinner (e.g. returning from Pet Profile). */
@@ -85,6 +87,21 @@ export default function OwnerDashboardScreen() {
 
       if (petsError) throw petsError
       setPets((petsData ?? []) as Pet[])
+
+      const { data: recentData, error: recentError } = await supabase
+        .from('bookings')
+        .select('*, pet:pet_id(*), minder:minder_id(*)')
+        .eq('requester_id', user.id)
+        .eq('status', 'completed')
+        .order('end_time', { ascending: false })
+        .limit(20)
+
+      if (recentError) {
+        console.warn('Recent bookings:', recentError)
+        setRecentFinished([])
+      } else {
+        setRecentFinished((recentData ?? []) as BookingWithDetails[])
+      }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Failed to load dashboard'
       setError(message)
@@ -157,16 +174,54 @@ export default function OwnerDashboardScreen() {
           </ScrollView>
         )}
 
-        <Text style={styles.sectionTitle}>Upcoming Bookings</Text>
-        {bookings.length === 0 ? (
-          <Text style={styles.empty}>No upcoming bookings yet.</Text>
+        <Text style={styles.sectionTitle}>Your bookings</Text>
+        <View style={styles.tabRow}>
+          <Pressable
+            onPress={() => setBookingTab('upcoming')}
+            style={[styles.tabPill, bookingTab === 'upcoming' && styles.tabPillActive]}
+          >
+            <Text style={[styles.tabPillText, bookingTab === 'upcoming' && styles.tabPillTextActive]}>
+              Upcoming
+            </Text>
+          </Pressable>
+          <Pressable
+            onPress={() => setBookingTab('recent')}
+            style={[styles.tabPill, bookingTab === 'recent' && styles.tabPillActive]}
+          >
+            <Text style={[styles.tabPillText, bookingTab === 'recent' && styles.tabPillTextActive]}>
+              Recently finished
+            </Text>
+          </Pressable>
+        </View>
+
+        {bookingTab === 'upcoming' ? (
+          bookings.length === 0 ? (
+            <Text style={styles.empty}>No upcoming bookings yet.</Text>
+          ) : (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.horizontalList}
+            >
+              {bookings.map(item => (
+                <View key={item.id} style={styles.bookingCardWrap}>
+                  <BookingCard
+                    booking={item}
+                    onPress={() => navigation.navigate('BookingDetails', { bookingId: item.id })}
+                  />
+                </View>
+              ))}
+            </ScrollView>
+          )
+        ) : recentFinished.length === 0 ? (
+          <Text style={styles.empty}>No finished bookings yet. Completed sessions appear here.</Text>
         ) : (
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.horizontalList}
           >
-            {bookings.map(item => (
+            {recentFinished.map(item => (
               <View key={item.id} style={styles.bookingCardWrap}>
                 <BookingCard
                   booking={item}
@@ -218,6 +273,25 @@ const styles = StyleSheet.create({
   errorText: { color: '#c0392b', marginBottom: 8, fontSize: 14 },
   sectionTitle: { fontSize: 18, fontWeight: '700', color: '#111', marginTop: 22, marginBottom: 10 },
   sectionTitleFirst: { marginTop: 0 },
+  tabRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 12,
+  },
+  tabPill: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 999,
+    backgroundColor: '#eef1f4',
+    borderWidth: 1,
+    borderColor: 'transparent',
+  },
+  tabPillActive: {
+    backgroundColor: '#e8f5e9',
+    borderColor: '#2E7D32',
+  },
+  tabPillText: { fontSize: 14, fontWeight: '600', color: '#64748b' },
+  tabPillTextActive: { color: '#1b4332' },
   horizontalList: { paddingVertical: 4 },
   bookingCardWrap: { width: 320, marginRight: 12 },
   empty: { color: '#7a7a7a', fontSize: 14, paddingVertical: 10 },

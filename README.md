@@ -143,7 +143,7 @@ Define and export:
 type BookingStatus = 'pending' | 'confirmed' | 'cancelled' | 'completed'
 interface Booking
 ```
-Fields: `id: string`, `pet_id: string`, `requester_id: string`, `minder_id: string`, `location: string`, `status: BookingStatus`, `start_time: string`, `end_time: string`, `is_recurring: boolean`, `recurring_schedule: string | null`, `created_at: string`.
+Fields: `id: string`, `pet_id: string`, `requester_id: string`, `minder_id: string`, `location: string`, `status: BookingStatus`, `start_time: string`, `end_time: string`, `created_at: string`.
 Also export `interface BookingWithDetails extends Booking` that includes `pet?: Pet`, `minder?: User`, `requester?: User`.
 
 ---
@@ -716,12 +716,12 @@ Renders a `Badge` with label = status (capitalised) and variant:
 ---
 
 ### `src/components/booking/CalendarPicker.tsx`
-Props: `availableSlots: TimeSlot[]`, `selectedStart: Date | null`, `selectedEnd: Date | null`, `onChange: (start: Date, end: Date) => void`.
+Props: `availableSlots: TimeSlot[]`, `selectedStart: Date | null`, `selectedEnd: Date | null`, `onRangeChange: (start: Date, end: Date) => void`.
 
 ```
-CalendarPicker({ availableSlots, selectedStart, selectedEnd, onChange })
+CalendarPicker({ availableSlots, selectedStart, selectedEnd, onRangeChange })
 ```
-Render a simple calendar view showing the current month. Days that have available slots are highlighted in green. Tapping a day sets the start date; tapping another day sets the end date (enforce start < end). Show the selected range highlighted. Call `onChange` when both dates are selected. Use React Native's built-in date/time capabilities — do not add new dependencies.
+Render a simple calendar view showing the current month. Days that have available slots are highlighted in green. First tap selects a day (start and end both that day). A second tap on another day sets an inclusive range; every day between must be available. A tap when a multi-day range is already selected starts a new single-day selection. Use React Native's built-in date/time capabilities — do not add new dependencies.
 
 ---
 
@@ -761,15 +761,15 @@ Props received via navigation: `minderId: string`.
 ```
 BookingRequestScreen()
 ```
-- Fetch the minder's calendar availability: `supabase.from('calendars').select('*').eq('user_id', minderId).maybeSingle()`.
+- Fetch the minder's calendar availability: `supabase.from('calendars').select('*').eq('minder_id', minderId).maybeSingle()`.
 - Fetch the owner's pets: `supabase.from('pets').select('*').eq('owner_id', currentUserId)`.
 - Form:
   1. **Select Pet** — a horizontal scrollable list of `PetCard` components (single selection).
-  2. **Select Dates** — `CalendarPicker` component, pre-loaded with `availableSlots` from minder's calendar.
-  3. **Location** — `Input` field pre-filled with minder's location, editable.
-  4. **Recurring?** — a `Switch` toggle. If on, show a text input for `recurring_schedule` (e.g. "Every Monday 9am").
+  2. **Choose dates** — `CalendarPicker` with `availableSlots` from minder's calendar (one day or a consecutive range).
+  3. **Start and end time** — start time on the first day and end time on the last day (end must be after start overall).
+  4. **Location** — `Input` field pre-filled with minder's location, editable.
 - Summary section showing price estimate: `formatPricePerHour(listing.price)` × estimated hours.
-- **Send Request** button: validate all fields, call `createBooking(dispatch, { pet_id, requester_id: currentUserId, minder_id: minderId, location, start_time, end_time, is_recurring, recurring_schedule })`.
+- **Send Request** button: validate all fields, call `createBooking(dispatch, { pet_id, requester_id: currentUserId, minder_id: minderId, location, start_time, end_time })` with ISO datetimes from the chosen day and times.
 - On success, show alert and navigate back to dashboard.
 
 ---

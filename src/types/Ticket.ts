@@ -4,6 +4,13 @@ export type TicketCategory = 'general' | 'booking' | 'payment' | 'account' | 'sa
 
 export type TicketPriority = 'low' | 'medium' | 'high'
 
+/** Joined from `by_user` when fetching admin ticket lists */
+export type TicketSubmitterPreview = {
+  display_name: string
+  email: string
+  username?: string
+}
+
 export interface Ticket {
   id: string
   query_type: string
@@ -14,6 +21,8 @@ export interface Ticket {
   issue_description: string
   created_at: string
   updated_at: string
+  /** Present when list/detail queries join `profiles` as `user` */
+  user?: TicketSubmitterPreview
 }
 
 export interface NewTicketInput {

@@ -40,8 +40,6 @@ export default function CreateTicketScreen() {
   const validate = () => {
     const e: typeof errors = {}
     if (!queryType.trim()) e.queryType = 'Please enter a short summary.'
-    if (description.trim().length < 20)
-      e.description = 'Description must be at least 20 characters.'
     setErrors(e)
     return Object.keys(e).length === 0
   }
@@ -105,7 +103,7 @@ export default function CreateTicketScreen() {
           label="Description"
           value={description}
           onChangeText={setDescription}
-          placeholder="Describe the issue in detail (min 20 characters)"
+          placeholder="Describe the issue (optional)"
           multiline
           maxLength={1000}
           error={errors.description}

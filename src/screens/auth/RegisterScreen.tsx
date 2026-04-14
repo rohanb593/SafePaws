@@ -1,7 +1,7 @@
 // Registration screen (RQ1, RQ26, RQ28, RQ29)
 
 import React, { useState } from 'react'
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native'
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import Input from '../../components/common/Input'
 import Button from '../../components/common/Button'
@@ -42,7 +42,11 @@ export default function RegisterScreen({ navigation }: any) {
   async function handleRegister() {
     if (!validate()) return
     const ok = await register(form)
-    if (ok) navigation.navigate('Login')
+    if (ok) {
+      // `register` already dispatches the profile — AppNavigator switches to the main app and
+      // unmounts the auth stack, so navigating to Login would fail (no navigator has that route).
+      Alert.alert('Welcome', 'Your account is ready.')
+    }
   }
 
   return (

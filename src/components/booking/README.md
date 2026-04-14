@@ -7,7 +7,7 @@ This document explains what was implemented for the booking flow and how to trou
 Two booking paths are supported:
 
 1. **Owner-initiated booking**
-   - Owner selects minder, pet, dates, location, recurring options.
+   - Owner selects minder, pet, one or more consecutive available days, start/end time (first/last day), and location.
    - Booking is created in `bookings` with `status='pending'`.
 
 2. **Minder-initiated job application**

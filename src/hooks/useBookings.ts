@@ -17,6 +17,7 @@ import {
   setLoading,
   setError,
 } from '@/src/store/bookingSlice'
+import { sendReviewPromptChatAfterCompletion } from '@/src/hooks/useChat'
 
 /**
  * Fetch all bookings where the current user is the requester (pet owner).
@@ -120,6 +121,14 @@ export async function updateBookingStatus(
     if (error) throw error
 
     dispatch(applyBookingStatus({ id: bookingId, status }))
+
+    if (status === 'completed') {
+      try {
+        await sendReviewPromptChatAfterCompletion(dispatch, bookingId)
+      } catch (e) {
+        console.warn('[useBookings] review prompt chat', e)
+      }
+    }
   } catch (err: unknown) {
     console.error('Failed to update booking status:', err)
     throw err
@@ -322,8 +331,6 @@ export async function acceptApplication(
         location: listing.location ?? '',
         start_time: typedApplication.proposed_start_time,
         end_time: typedApplication.proposed_end_time,
-        is_recurring: false,
-        recurring_schedule: null,
       },
       'confirmed'
     )

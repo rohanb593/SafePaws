@@ -3,10 +3,12 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs'
 import { createNativeStackNavigator } from '@react-navigation/native-stack'
 import Icon from '@expo/vector-icons/MaterialIcons'
 
+import ChatsTabBarIcon from '../components/navigation/ChatsTabBarIcon'
 import OwnerDashboardScreen from '../screens/owner/OwnerDashboardScreen'
 import SearchMinderScreen from '../screens/owner/SearchMinderScreen'
 import ListingsScreen from '../screens/shared/ListingsScreen'
 import ProfileScreen from '../screens/shared/ProfileScreen'
+import ProfileDetailsScreen from '../screens/shared/ProfileDetailsScreen'
 import ChatsListScreen from '../screens/shared/ChatsListScreen'
 import MinderProfileScreen from '../screens/owner/MinderProfileScreen'
 import BookingRequestScreen from '../screens/owner/BookingRequestScreen'
@@ -22,6 +24,7 @@ import MindersMapScreen from '../screens/owner/MindersMapScreen'
 import MinderLocationMapScreen from '../screens/owner/MinderLocationMapScreen'
 import JobDetailsScreen from '../screens/minder/JobDetailsScreen'
 import SessionScreen from '../screens/minder/SessionScreen'
+import PastBookingPeopleScreen from '../screens/shared/PastBookingPeopleScreen'
 
 export type OwnerTabParamList = {
   Dashboard: undefined
@@ -33,6 +36,7 @@ export type OwnerTabParamList = {
 export type OwnerStackParamList = {
   OwnerTabs: undefined
   Profile: undefined
+  ProfileDetails: undefined
   MinderProfile: { minderId: string }
   BookingRequest: { minderId: string }
   BookingDetails: { bookingId: string }
@@ -49,6 +53,7 @@ export type OwnerStackParamList = {
   JobDetails: { bookingId: string }
   /** Live GPS session (minder) — must exist here when JobDetails is opened from this stack. */
   Session: { bookingId: string }
+  PastBookingPeople: undefined
 }
 
 const Tab = createBottomTabNavigator<OwnerTabParamList>()
@@ -60,11 +65,13 @@ function OwnerTabs() {
       screenOptions={({ route }) => ({
         headerShown: false,
         tabBarIcon: ({ color, size }) => {
+          if (route.name === 'Chats') {
+            return <ChatsTabBarIcon color={color} size={size} />
+          }
           let iconName: keyof typeof Icon.glyphMap = 'home'
 
           if (route.name === 'Search') iconName = 'search'
           if (route.name === 'Listings') iconName = 'list'
-          if (route.name === 'Chats') iconName = 'chat'
 
           return <Icon name={iconName} size={size} color={color} />
         },
@@ -83,6 +90,11 @@ export default function OwnerNavigator() {
     <Stack.Navigator>
       <Stack.Screen name="OwnerTabs" component={OwnerTabs} options={{ headerShown: false }} />
       <Stack.Screen name="Profile" component={ProfileScreen} options={{ title: 'Profile' }} />
+      <Stack.Screen
+        name="ProfileDetails"
+        component={ProfileDetailsScreen}
+        options={{ title: 'Account details' }}
+      />
       <Stack.Screen name="MinderProfile" component={MinderProfileScreen} />
       <Stack.Screen name="BookingRequest" component={BookingRequestScreen} />
       <Stack.Screen name="BookingDetails" component={BookingDetailsScreen} />
@@ -97,6 +109,11 @@ export default function OwnerNavigator() {
       <Stack.Screen name="JobDetails" component={JobDetailsScreen} options={{ title: 'Booking request' }} />
       <Stack.Screen name="Session" component={SessionScreen} options={{ title: 'Active session', headerShown: false }} />
       <Stack.Screen name="CreateTicket" component={CreateTicketScreen} />
+      <Stack.Screen
+        name="PastBookingPeople"
+        component={PastBookingPeopleScreen}
+        options={{ title: 'Booking history' }}
+      />
     </Stack.Navigator>
   )
 }

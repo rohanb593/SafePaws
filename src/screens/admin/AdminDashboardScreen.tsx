@@ -14,6 +14,7 @@ import { useSelector } from 'react-redux'
 
 import { RootState } from '../../store'
 import { supabase } from '../../lib/supabase'
+import ScreenHeader from '../../components/common/ScreenHeader'
 
 type Stats = {
   totalUsers: number
@@ -34,6 +35,7 @@ function StatCard({ label, value }: { label: string; value: number | null }) {
 export default function AdminDashboardScreen() {
   const navigation = useNavigation<NavigationProp<ParamListBase>>()
   const currentUser = useSelector((state: RootState) => state.auth.user)
+  const role = useSelector((state: RootState) => state.auth.role)
   const [stats, setStats] = useState<Stats | null>(null)
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
@@ -67,14 +69,20 @@ export default function AdminDashboardScreen() {
     setRefreshing(false)
   }
 
+  const headerTitle =
+    role === 'customer_support' ? 'Support overview' : 'Overview'
+
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
+    <SafeAreaView style={styles.safe} edges={['top', 'left', 'right', 'bottom']}>
       <ScrollView
         contentContainerStyle={styles.scroll}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
-        <Text style={styles.title}>Admin Dashboard</Text>
-        <Text style={styles.subtitle}>Welcome, {currentUser?.display_name}</Text>
+        <ScreenHeader title={headerTitle} />
+        <Text style={styles.subtitle}>
+          Welcome, {currentUser?.display_name}
+          {role === 'customer_support' ? ' · Customer support' : role === 'admin' ? ' · Administrator' : ''}
+        </Text>
 
         {loading ? (
           <ActivityIndicator size="large" color="#2E7D32" style={{ marginTop: 40 }} />
@@ -91,27 +99,28 @@ export default function AdminDashboardScreen() {
 
         <TouchableOpacity
           style={styles.actionBtn}
-          onPress={() => navigation.navigate('TicketQueue')}
+          onPress={() => navigation.navigate('Tickets')}
         >
-          <Text style={styles.actionBtnText}>🎫  View Ticket Queue</Text>
+          <Text style={styles.actionBtnText}>🎫  Open tickets</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity
-          style={styles.actionBtn}
-          onPress={() => navigation.navigate('UserManagement')}
-        >
-          <Text style={styles.actionBtnText}>👥  Manage Users</Text>
-        </TouchableOpacity>
+        {role === 'admin' && (
+          <TouchableOpacity
+            style={styles.actionBtn}
+            onPress={() => navigation.navigate('Users')}
+          >
+            <Text style={styles.actionBtnText}>👥  Manage users</Text>
+          </TouchableOpacity>
+        )}
       </ScrollView>
     </SafeAreaView>
   )
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#f6f8f7' },
-  scroll: { padding: 20 },
-  title: { fontSize: 26, fontWeight: '700', color: '#1b4332' },
-  subtitle: { fontSize: 15, color: '#555', marginBottom: 24 },
+  safe: { flex: 1, backgroundColor: '#f8f9fb' },
+  scroll: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 32 },
+  subtitle: { fontSize: 16, color: '#333', marginBottom: 24, fontWeight: '600', lineHeight: 22 },
   statsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',

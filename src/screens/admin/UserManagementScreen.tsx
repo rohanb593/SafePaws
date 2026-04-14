@@ -12,13 +12,16 @@ import {
   View,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
+import { useSelector } from 'react-redux'
 
 import { supabase } from '../../lib/supabase'
+import { RootState } from '../../store'
 import { User } from '../../types/User'
 import Avatar from '../../components/common/Avatar'
 import Badge from '../../components/common/Badge'
 import LoadingSpinner from '../../components/common/LoadingSpinner'
 import { formatRelativeTime } from '../../utils/formatDate'
+import ScreenHeader from '../../components/common/ScreenHeader'
 
 type RoleFilter = 'all' | 'user' | 'minder' | 'admin' | 'customer_support'
 
@@ -26,6 +29,7 @@ const ROLE_TABS: { label: string; value: RoleFilter }[] = [
   { label: 'All', value: 'all' },
   { label: 'Users', value: 'user' },
   { label: 'Minders', value: 'minder' },
+  { label: 'Support', value: 'customer_support' },
   { label: 'Admins', value: 'admin' },
 ]
 
@@ -42,6 +46,7 @@ function statusVariant(status: string) {
 }
 
 export default function UserManagementScreen() {
+  const myRole = useSelector((state: RootState) => state.auth.role)
   const [users, setUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
@@ -96,6 +101,7 @@ export default function UserManagementScreen() {
       'Ban Account',
       'Reactivate Account',
       'Make Minder',
+      'Make Customer Support',
       'Make Admin',
       'Cancel',
     ]
@@ -129,7 +135,8 @@ export default function UserManagementScreen() {
       case 1: return void updateUser(user.id, { account_status: 'banned' })
       case 2: return void updateUser(user.id, { account_status: 'active' })
       case 3: return void updateUser(user.id, { role: 'minder' })
-      case 4: return void updateUser(user.id, { role: 'admin' })
+      case 4: return void updateUser(user.id, { role: 'customer_support' })
+      case 5: return void updateUser(user.id, { role: 'admin' })
     }
   }
 
@@ -141,6 +148,20 @@ export default function UserManagementScreen() {
       u.email.toLowerCase().includes(search.toLowerCase())
     return matchRole && matchSearch
   })
+
+  if (myRole !== 'admin') {
+    return (
+      <SafeAreaView style={styles.safe} edges={['top', 'left', 'right', 'bottom']}>
+        <View style={styles.screenPad}>
+          <ScreenHeader title="Users" />
+        </View>
+        <Text style={styles.restricted}>
+          Only administrator accounts can change roles or account status. Customer support staff
+          should use the Tickets tab for member context.
+        </Text>
+      </SafeAreaView>
+    )
+  }
 
   const renderUser = ({ item }: { item: User }) => (
     <TouchableOpacity style={styles.card} onPress={() => openActions(item)}>
@@ -159,9 +180,10 @@ export default function UserManagementScreen() {
   )
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
-      <Text style={styles.title}>User Management</Text>
-
+    <SafeAreaView style={styles.safe} edges={['top', 'left', 'right', 'bottom']}>
+      <View style={styles.screenPad}>
+        <ScreenHeader title="Users" />
+      </View>
       <TextInput
         style={styles.search}
         value={search}
@@ -204,10 +226,10 @@ export default function UserManagementScreen() {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#f6f8f7' },
-  title: { fontSize: 24, fontWeight: '700', color: '#1b4332', paddingHorizontal: 16, paddingTop: 16, paddingBottom: 8 },
+  safe: { flex: 1, backgroundColor: '#f8f9fb' },
+  screenPad: { paddingHorizontal: 20, paddingTop: 8 },
   search: {
-    marginHorizontal: 16,
+    marginHorizontal: 20,
     marginBottom: 10,
     borderWidth: 1,
     borderColor: '#ddd',
@@ -218,12 +240,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     color: '#222',
   },
-  tabs: { flexDirection: 'row', paddingHorizontal: 16, gap: 8, marginBottom: 8 },
+  tabs: { flexDirection: 'row', paddingHorizontal: 20, gap: 8, marginBottom: 8 },
   tab: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20, backgroundColor: '#e8e8e8' },
   tabActive: { backgroundColor: '#2E7D32' },
   tabText: { fontSize: 13, color: '#555', fontWeight: '600' },
   tabTextActive: { color: '#fff' },
-  list: { paddingHorizontal: 16, paddingBottom: 24 },
+  list: { paddingHorizontal: 20, paddingBottom: 24 },
   card: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -244,4 +266,11 @@ const styles = StyleSheet.create({
   badges: { flexDirection: 'row', gap: 6, marginTop: 4 },
   time: { fontSize: 11, color: '#aaa' },
   empty: { textAlign: 'center', color: '#999', marginTop: 60, fontSize: 15 },
+  restricted: {
+    marginHorizontal: 20,
+    marginTop: 8,
+    fontSize: 15,
+    color: '#555',
+    lineHeight: 22,
+  },
 })

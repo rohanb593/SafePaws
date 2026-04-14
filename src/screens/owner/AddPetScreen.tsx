@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
 import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 import { useSelector } from 'react-redux'
-import { useNavigation, useRoute, type NavigationProp, type ParamListBase } from '@react-navigation/native'
+import { useNavigation, useRoute } from '@react-navigation/native'
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
+import type { OwnerStackParamList } from '@/src/navigation/OwnerNavigator'
 import { RootState } from '@/src/store'
 import { supabase } from '@/src/lib/supabase'
 import Input from '@/src/components/common/Input'
@@ -14,7 +16,7 @@ interface RouteParams {
 const PET_TYPES = ['Dog', 'Cat', 'Bird', 'Fish', 'Other'] as const
 
 export default function AddPetScreen() {
-  const navigation = useNavigation<NavigationProp<ParamListBase>>()
+  const navigation = useNavigation<NativeStackNavigationProp<OwnerStackParamList>>()
   const route = useRoute()
   const user = useSelector((state: RootState) => state.auth.user)
   const { petId } = (route.params as RouteParams) || {}
@@ -97,7 +99,8 @@ export default function AddPetScreen() {
       if (error) throw error
 
       if (data?.id) {
-        navigation.navigate('PetProfile', { petId: data.id })
+        // Replace so back from PetProfile does not return to this form (avoids duplicate inserts).
+        navigation.replace('PetProfile', { petId: data.id })
       } else {
         navigation.goBack()
       }

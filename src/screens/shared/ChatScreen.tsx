@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef } from 'react'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
 import {
   FlatList,
   StyleSheet,
@@ -6,7 +6,7 @@ import {
   View,
   ActivityIndicator,
 } from 'react-native'
-import { useRoute, useNavigation } from '@react-navigation/native'
+import { useRoute, useNavigation, useFocusEffect } from '@react-navigation/native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useDispatch, useSelector } from 'react-redux'
 
@@ -23,6 +23,17 @@ import MessageBubble from '../../components/chat/MessageBubble'
 import ChatInput from '../../components/chat/ChatInput'
 import Avatar from '../../components/common/Avatar'
 import { supabase } from '../../lib/supabase'
+import UserHistorySection from '../../components/admin/UserHistorySection'
+import Badge from '../../components/common/Badge'
+import type { TicketStatus } from '../../types/Ticket'
+import {
+  parseSupportCustomerIdFromThread,
+  parseSupportTicketIdFromThread,
+} from '../../utils/threadId'
+import { ticketStatusBadgeProps } from '../../utils/ticketStatusUi'
+
+/** Stable fallback for `useSelector` — avoid `?? []` which creates a new array each run. */
+const EMPTY_CHAT_MESSAGES: ChatMessage[] = []
 
 export default function ChatScreen() {
   const route = useRoute()
@@ -31,14 +42,107 @@ export default function ChatScreen() {
   const { threadId, otherUserId } = route.params as { threadId: string; otherUserId: string }
 
   const currentUser = useSelector((state: RootState) => state.auth.user)
-  const messages = useSelector(
-    (state: RootState) => state.chat.threads[threadId] ?? []
-  )
+  const isStaff =
+    currentUser?.role === 'admin' || currentUser?.role === 'customer_support'
+  const messages = useSelector((state: RootState) => {
+    const thread = state.chat.threads[threadId]
+    return thread ?? EMPTY_CHAT_MESSAGES
+  })
   const loading = useSelector((state: RootState) => state.chat.loading)
 
   const [otherName, setOtherName] = React.useState('')
   const [otherAvatar, setOtherAvatar] = React.useState<string | null>(null)
+  const [ticketStatus, setTicketStatus] = useState<TicketStatus | null>(null)
   const flatListRef = useRef<FlatList>(null)
+
+  const supportTicketId = parseSupportTicketIdFromThread(threadId)
+  const supportCustomerId = parseSupportCustomerIdFromThread(threadId)
+
+  const loadTicketStatus = useCallback(async () => {
+    if (supportCustomerId) {
+      const { data } = await supabase
+        .from('tickets')
+        .select('status')
+        .eq('by_user', supportCustomerId)
+        .in('status', ['pending', 'opened'])
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      if (data?.status) setTicketStatus(data.status as TicketStatus)
+      else setTicketStatus(null)
+      return
+    }
+    if (!supportTicketId) {
+      setTicketStatus(null)
+      return
+    }
+    const { data } = await supabase
+      .from('tickets')
+      .select('status')
+      .eq('id', supportTicketId)
+      .maybeSingle()
+    if (data?.status) setTicketStatus(data.status as TicketStatus)
+    else setTicketStatus(null)
+  }, [supportTicketId, supportCustomerId])
+
+  useEffect(() => {
+    void loadTicketStatus()
+  }, [loadTicketStatus])
+
+  useFocusEffect(
+    useCallback(() => {
+      void loadTicketStatus()
+    }, [loadTicketStatus])
+  )
+
+  useEffect(() => {
+    if (!supportTicketId) return
+
+    const channel = supabase
+      .channel(`ticket-status-chat-${supportTicketId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'tickets',
+          filter: `id=eq.${supportTicketId}`,
+        },
+        (payload) => {
+          const row = payload.new as { status?: TicketStatus } | null
+          if (row?.status) setTicketStatus(row.status)
+        }
+      )
+      .subscribe()
+
+    return () => {
+      void supabase.removeChannel(channel)
+    }
+  }, [supportTicketId])
+
+  useEffect(() => {
+    if (!supportCustomerId) return
+
+    const channel = supabase
+      .channel(`ticket-status-by-user-${supportCustomerId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'tickets',
+          filter: `by_user=eq.${supportCustomerId}`,
+        },
+        () => {
+          void loadTicketStatus()
+        }
+      )
+      .subscribe()
+
+    return () => {
+      void supabase.removeChannel(channel)
+    }
+  }, [supportCustomerId, loadTicketStatus])
 
   useEffect(() => {
     void (async () => {
@@ -96,7 +200,15 @@ export default function ChatScreen() {
     <SafeAreaView style={styles.safe} edges={['left', 'right', 'bottom']}>
       <View style={styles.header}>
         <Avatar uri={otherAvatar} name={otherName || '?'} size={36} />
-        <Text style={styles.headerName}>{otherName || '…'}</Text>
+        <View style={styles.headerMain}>
+          <Text style={styles.headerName}>{otherName || '…'}</Text>
+          {(supportTicketId || supportCustomerId) && ticketStatus != null ? (
+            <View style={styles.ticketStatusRow}>
+              <Text style={styles.ticketStatusLabel}>Ticket</Text>
+              <Badge {...ticketStatusBadgeProps(ticketStatus)} />
+            </View>
+          ) : null}
+        </View>
       </View>
 
       {loading && messages.length === 0 ? (
@@ -115,6 +227,11 @@ export default function ChatScreen() {
             />
           )}
           contentContainerStyle={styles.list}
+          ListHeaderComponent={
+            isStaff ? (
+              <UserHistorySection userId={otherUserId} compact />
+            ) : null
+          }
           ListEmptyComponent={
             <Text style={styles.empty}>No messages yet. Say hello!</Text>
           }
@@ -141,7 +258,20 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     gap: 10,
   },
+  headerMain: { flex: 1, minWidth: 0 },
   headerName: { fontSize: 17, fontWeight: '600', color: '#1b4332' },
+  ticketStatusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 6,
+    flexWrap: 'wrap',
+  },
+  ticketStatusLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#64748b',
+  },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   list: { paddingVertical: 12 },
   empty: { textAlign: 'center', color: '#999', marginTop: 40, fontSize: 15 },
