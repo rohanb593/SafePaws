@@ -29,7 +29,7 @@ export default function AvailabilityScreen() {
     if (!user?.id) return
     setLoading(true)
     try {
-      const { data } = await supabase.from('calendars').select('*').eq('minder_id', user.id).maybeSingle()
+      const { data } = await supabase.from('calendars').select('*').eq('user_id', user.id).maybeSingle()
       setCalendarId(data?.id ?? null)
       setAvailableTiming((data?.available_timing as TimeSlot[]) ?? [])
       setBookedTiming((data?.booked_timing as TimeSlot[]) ?? [])
@@ -70,12 +70,12 @@ export default function AvailabilityScreen() {
     setSaving(true)
     const payload = {
       id: calendarId ?? undefined,
-      minder_id: user.id,
+      user_id: user.id,
       available_timing: availableTiming,
       booked_timing: bookedTiming,
       updated_at: new Date().toISOString(),
     }
-    const { error } = await supabase.from('calendars').upsert(payload)
+    const { error } = await supabase.from('calendars').upsert(payload, { onConflict: 'user_id' })
     setSaving(false)
     if (error) {
       Alert.alert('Error', error.message)

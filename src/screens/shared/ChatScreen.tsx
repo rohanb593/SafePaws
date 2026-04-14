@@ -32,9 +32,6 @@ import {
 } from '../../utils/threadId'
 import { ticketStatusBadgeProps } from '../../utils/ticketStatusUi'
 
-/** Stable fallback for `useSelector` — avoid `?? []` which creates a new array each run. */
-const EMPTY_CHAT_MESSAGES: ChatMessage[] = []
-
 export default function ChatScreen() {
   const route = useRoute()
   const navigation = useNavigation()
@@ -44,10 +41,9 @@ export default function ChatScreen() {
   const currentUser = useSelector((state: RootState) => state.auth.user)
   const isStaff =
     currentUser?.role === 'admin' || currentUser?.role === 'customer_support'
-  const messages = useSelector((state: RootState) => {
-    const thread = state.chat.threads[threadId]
-    return thread ?? EMPTY_CHAT_MESSAGES
-  })
+  const messages = useSelector(
+    (state: RootState) => state.chat.threads[threadId] ?? []
+  )
   const loading = useSelector((state: RootState) => state.chat.loading)
 
   const [otherName, setOtherName] = React.useState('')

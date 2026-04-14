@@ -178,6 +178,28 @@ export async function fetchMyListings(dispatch: AppDispatch, userId: string): Pr
   }
 }
 
+/** Columns on `public.listings` — only these are sent on insert to avoid stray client fields. */
+function toListingsInsertRow(
+  listing: Omit<Listing, 'id' | 'created_at'> & { distanceKm?: number }
+) {
+  const { distanceKm: _d, ...rest } = listing
+  const row: Record<string, unknown> = {
+    user_id: rest.user_id,
+    location: rest.location,
+    postcode: rest.postcode ?? '',
+    description: rest.description ?? '',
+    animal: rest.animal,
+    availability: rest.availability ?? null,
+    time: rest.time ?? null,
+    price: rest.price ?? null,
+    rating: rest.rating ?? null,
+  }
+  if (rest.listing_type != null) {
+    row.listing_type = rest.listing_type
+  }
+  return row
+}
+
 export async function createListing(
   dispatch: AppDispatch,
   listing: Omit<Listing, 'id' | 'created_at'>
@@ -186,14 +208,15 @@ export async function createListing(
   dispatch(setError(null))
 
   try {
-    const { distanceKm: _clientDistance, ...row } = listing as Omit<Listing, 'id' | 'created_at'> & {
-      distanceKm?: number
-    }
-    const { data, error } = await supabase.from('listings').insert(row).select('*').single()
+    const row = toListingsInsertRow(listing)
+    const { data, error } = await supabase.from('listings').insert(row).select('*')
     if (error) {
       throw error
     }
-    return { listing: data as Listing, errorMessage: null }
+    const inserted = Array.isArray(data) && data.length > 0 ? (data[0] as Listing) : null
+    const refreshed = await fetchMyListings(dispatch, listing.user_id)
+    const listingOut = inserted ?? refreshed[0] ?? null
+    return { listing: listingOut, errorMessage: null }
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Failed to create listing'
     dispatch(setError(message))

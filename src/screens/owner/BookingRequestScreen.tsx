@@ -102,7 +102,7 @@ export default function BookingRequestScreen() {
       const { data: calData, error: calErr } = await supabase
         .from('calendars')
         .select('*')
-        .eq('minder_id', minderId)
+        .eq('user_id', minderId)
         .maybeSingle()
 
       if (calErr) throw calErr

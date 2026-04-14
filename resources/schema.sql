@@ -1,5 +1,9 @@
 -- WARNING: This schema is for context only and is not meant to be run.
 -- Table order and constraints may not be valid for execution.
+--
+-- Snapshot of production-aligned shape. Repo migrations that diverge:
+--   - 015_drop_listings_listing_type.sql — drops listings.listing_type (do not apply if you keep NOT NULL listing_type).
+--   - 019_drop_bookings_recurring.sql — drops recurring columns on bookings (do not apply if you keep them).
 
 CREATE TABLE public.bookings (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -10,6 +14,8 @@ CREATE TABLE public.bookings (
   status USER-DEFINED NOT NULL DEFAULT 'pending'::booking_status,
   start_time timestamp with time zone NOT NULL,
   end_time timestamp with time zone NOT NULL,
+  is_recurring boolean NOT NULL DEFAULT false,
+  recurring_schedule text,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
   CONSTRAINT bookings_pkey PRIMARY KEY (id),
   CONSTRAINT bookings_pet_id_fkey FOREIGN KEY (pet_id) REFERENCES public.pets(id),
@@ -63,16 +69,36 @@ CREATE TABLE public.listings (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   user_id uuid NOT NULL,
   location text NOT NULL,
-  postcode text NOT NULL DEFAULT ''::text,
   description text NOT NULL DEFAULT ''::text,
+  listing_type USER-DEFINED NOT NULL,
   animal text,
-  availability jsonb,
   time text,
   price numeric,
   rating numeric,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
+  postcode text NOT NULL DEFAULT ''::text,
+  availability jsonb,
   CONSTRAINT listings_pkey PRIMARY KEY (id),
   CONSTRAINT listings_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id)
+);
+
+-- Minder proposals against an owner’s listing (see JobApplicationScreen / useBookings).
+CREATE TABLE public.booking_applications (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  owner_listing_id uuid NOT NULL,
+  minder_id uuid NOT NULL,
+  minder_listing_id uuid,
+  proposed_price numeric NOT NULL,
+  proposed_start_time timestamp with time zone NOT NULL,
+  proposed_end_time timestamp with time zone NOT NULL,
+  proposed_notes text NOT NULL DEFAULT ''::text,
+  status text NOT NULL DEFAULT 'pending'::text,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT booking_applications_pkey PRIMARY KEY (id),
+  CONSTRAINT booking_applications_owner_listing_id_fkey FOREIGN KEY (owner_listing_id) REFERENCES public.listings(id) ON DELETE CASCADE,
+  CONSTRAINT booking_applications_minder_id_fkey FOREIGN KEY (minder_id) REFERENCES public.profiles(id) ON DELETE CASCADE,
+  CONSTRAINT booking_applications_minder_listing_id_fkey FOREIGN KEY (minder_listing_id) REFERENCES public.listings(id) ON DELETE SET NULL
 );
 
 CREATE TABLE public.medical_records (
@@ -110,7 +136,7 @@ CREATE TABLE public.profiles (
   email text NOT NULL,
   phone text,
   preferred_communication USER-DEFINED NOT NULL DEFAULT 'in-app'::preferred_communication,
-  role USER-DEFINED NOT NULL DEFAULT 'user'::user_role,
+  role USER-DEFINED NOT NULL DEFAULT 'user'::user_role CHECK (role::text = ANY (ARRAY['user'::text, 'minder'::text, 'admin'::text, 'customer_support'::text])),
   account_status USER-DEFINED NOT NULL DEFAULT 'active'::account_status,
   vet_clinic_name text,
   vet_clinic_phone text,
@@ -119,6 +145,7 @@ CREATE TABLE public.profiles (
   ratings numeric NOT NULL DEFAULT 0,
   pet_info text NOT NULL DEFAULT ''::text,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
+  listing_type text CHECK (listing_type IS NULL OR (listing_type = ANY (ARRAY['owner'::text, 'minder'::text]))),
   CONSTRAINT profiles_pkey PRIMARY KEY (id),
   CONSTRAINT profiles_id_fkey FOREIGN KEY (id) REFERENCES auth.users(id)
 );

@@ -3,11 +3,11 @@
 // Table: calendars
 // Columns:
 //   id: string (uuid, primary key)
-//   minder_id: string (uuid, unique FK → profiles.id)
+//   user_id: string (uuid, unique FK → profiles.id — the minder’s profile id)
 //   available_timing: Json   (TimeSlot[])
 //   booked_timing: Json      (TimeSlot[])
 //
-// RLS: minder can update their own; any authenticated user can read
+// RLS: same user can update their row; any authenticated user can read
 //
 // Exports: Calendar interface, TimeSlot interface, GPSCoordinates interface
 export interface TimeSlot {
@@ -18,7 +18,7 @@ export interface TimeSlot {
 
 export interface Calendar {
   id: string
-  minder_id: string
+  user_id: string
   available_timing: TimeSlot[]
   booked_timing: TimeSlot[]
   updated_at: string

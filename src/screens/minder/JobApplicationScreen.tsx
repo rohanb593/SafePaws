@@ -68,7 +68,7 @@ export default function JobApplicationScreen() {
         const { data: calData } = await supabase
           .from('calendars')
           .select('*')
-          .eq('minder_id', user.id)
+          .eq('user_id', user.id)
           .maybeSingle()
         setCalendar((calData as Calendar | null) ?? null)
       } catch (err: unknown) {

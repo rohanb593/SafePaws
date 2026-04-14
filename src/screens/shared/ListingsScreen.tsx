@@ -36,6 +36,7 @@ import {
 } from '../../types/availability'
 import { snapHHmm } from '../../utils/timeMinutes'
 import { Listing } from '../../types/Listing'
+import { listingTypeForDbInsert } from '../../utils/listingTypeForDb'
 
 /** Parse DB text (e.g. "Dog, Cat") into known options in filter order. */
 function animalsFromStored(value: string | null | undefined): string[] {
@@ -137,6 +138,7 @@ export default function ListingsScreen() {
     }
     const payload: Omit<Listing, 'id' | 'created_at'> = {
       user_id: user.id,
+      listing_type: listingTypeForDbInsert(user),
       description: form.description.trim(),
       postcode: form.postcode.trim(),
       location: form.location.trim(),
@@ -162,7 +164,10 @@ export default function ListingsScreen() {
     }
 
     setShowModal(false)
-    await refresh()
+    // createListing already refreshes my listings; only refetch after edits.
+    if (editing) {
+      await refresh()
+    }
   }
 
   const handleDelete = (id: string) => {
