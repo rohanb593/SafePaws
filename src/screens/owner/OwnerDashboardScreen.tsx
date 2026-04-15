@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Pressable, ScrollView, Text, View, StyleSheet } from 'react-native'
 import Icon from '@expo/vector-icons/MaterialIcons'
 import { SafeAreaView } from 'react-native-safe-area-context'
@@ -31,8 +31,8 @@ export default function OwnerDashboardScreen() {
   const { activeBookingId } = useActiveMinderSession()
   const bookings = useSelector((state: RootState) => state.bookings.bookings) as BookingWithDetails[]
   const [pets, setPets] = useState<Pet[]>([])
-  /** Bookings where the current user is the minder (incoming requests). Shown here when using Owner UI (e.g. listing_type owner) or role user with a listing. */
-  const [incomingAsMinder, setIncomingAsMinder] = useState<BookingWithDetails[]>([])
+  /** Bookings where the current user is the minder: pending + confirmed (split in UI). */
+  const [minderSideBookings, setMinderSideBookings] = useState<BookingWithDetails[]>([])
   const [recentFinished, setRecentFinished] = useState<BookingWithDetails[]>([])
   const [bookingTab, setBookingTab] = useState<'upcoming' | 'recent'>('upcoming')
   const [loading, setLoading] = useState(true)
@@ -70,14 +70,14 @@ export default function OwnerDashboardScreen() {
         .from('bookings')
         .select('*, pet:pet_id(*), booking_pets(pets(*)), requester:requester_id(*)')
         .eq('minder_id', user.id)
-        .eq('status', 'pending')
-        .order('created_at', { ascending: false })
+        .in('status', ['pending', 'confirmed'])
+        .order('start_time', { ascending: true })
 
       if (incomingError) {
-        console.warn('Incoming minder bookings:', incomingError)
-        setIncomingAsMinder([])
+        console.warn('Minder-side bookings:', incomingError)
+        setMinderSideBookings([])
       } else {
-        setIncomingAsMinder((incomingData ?? []) as BookingWithDetails[])
+        setMinderSideBookings((incomingData ?? []) as BookingWithDetails[])
       }
 
       const { data: petsData, error: petsError } = await supabase
@@ -120,6 +120,23 @@ export default function OwnerDashboardScreen() {
     }, [loadDashboardData])
   )
 
+  const incomingPending = useMemo(
+    () =>
+      minderSideBookings
+        .filter(b => b.status === 'pending')
+        .sort((a, b) => +new Date(b.created_at) - +new Date(a.created_at)),
+    [minderSideBookings]
+  )
+
+  /** Confirmed jobs where you are the minder (until completed). */
+  const activeMinderJobs = useMemo(
+    () =>
+      minderSideBookings
+        .filter(b => b.status === 'confirmed')
+        .sort((a, b) => +new Date(a.start_time) - +new Date(b.start_time)),
+    [minderSideBookings]
+  )
+
   if (loading) return <LoadingSpinner fullScreen />
 
   return (
@@ -158,7 +175,7 @@ export default function OwnerDashboardScreen() {
         ) : null}
 
         <Text style={[styles.sectionTitle, styles.sectionTitleFirst]}>Booking requests for you</Text>
-        {incomingAsMinder.length === 0 ? (
+        {incomingPending.length === 0 ? (
           <Text style={styles.empty}>No pending requests from pet owners.</Text>
         ) : (
           <ScrollView
@@ -166,7 +183,27 @@ export default function OwnerDashboardScreen() {
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.horizontalList}
           >
-            {incomingAsMinder.map(item => (
+            {incomingPending.map(item => (
+              <View key={item.id} style={styles.bookingCardWrap}>
+                <BookingCard
+                  booking={item}
+                  onPress={() => navigation.navigate('JobDetails', { bookingId: item.id })}
+                />
+              </View>
+            ))}
+          </ScrollView>
+        )}
+
+        <Text style={styles.sectionTitle}>Your jobs as a minder</Text>
+        {activeMinderJobs.length === 0 ? (
+          <Text style={styles.empty}>No active confirmed jobs. Accept a request above to start.</Text>
+        ) : (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.horizontalList}
+          >
+            {activeMinderJobs.map(item => (
               <View key={item.id} style={styles.bookingCardWrap}>
                 <BookingCard
                   booking={item}

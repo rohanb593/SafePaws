@@ -71,10 +71,11 @@ export default function MinderDashboardScreen() {
   const now = new Date()
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
 
+  /** All confirmed jobs (until completed/cancelled). Date filters hid valid work after accept. */
   const activeUpcoming = useMemo(
     () =>
       bookings
-        .filter(b => b.status === 'confirmed' && new Date(b.start_time) >= now)
+        .filter(b => b.status === 'confirmed')
         .sort((a, b) => +new Date(a.start_time) - +new Date(b.start_time)),
     [bookings]
   )
