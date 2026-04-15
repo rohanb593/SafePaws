@@ -21,6 +21,9 @@ import { ActiveMinderSessionProvider } from '../context/ActiveMinderSessionConte
 export default function AppNavigator() {
   const dispatch = useDispatch()
   const isAuthenticated = useSelector((state: RootState) => state.auth.isAuthenticated)
+  const completingPasswordReset = useSelector(
+    (state: RootState) => state.auth.completingPasswordReset
+  )
   const role = useSelector((state: RootState) => state.auth.role)
   const user = useSelector((state: RootState) => state.auth.user)
   const [initialising, setInitialising] = useState(true)
@@ -145,7 +148,7 @@ export default function AppNavigator() {
   return (
     <NavigationIndependentTree>
       <NavigationContainer>
-        {isAuthenticated ? (
+        {isAuthenticated && !completingPasswordReset ? (
           <ActiveMinderSessionProvider>
             {role === 'admin' || role === 'customer_support' ? (
               <AdminNavigator />

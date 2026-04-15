@@ -98,11 +98,8 @@ export default function UserManagementScreen() {
   const openActions = (user: User) => {
     const options = [
       'Suspend Account',
-      'Ban Account',
       'Reactivate Account',
-      'Make Minder',
       'Make Customer Support',
-      'Make Admin',
       'Cancel',
     ]
 
@@ -111,7 +108,7 @@ export default function UserManagementScreen() {
         {
           options,
           cancelButtonIndex: options.length - 1,
-          destructiveButtonIndex: 1,
+          destructiveButtonIndex: 0,
           title: `${user.display_name} (${user.username})`,
         },
         (index) => handleAction(index, user)
@@ -122,7 +119,7 @@ export default function UserManagementScreen() {
         'Choose an action',
         options.slice(0, -1).map((label, i) => ({
           text: label,
-          style: i === 1 ? 'destructive' : 'default',
+          style: i === 0 ? 'destructive' : 'default',
           onPress: () => handleAction(i, user),
         }))
       )
@@ -132,11 +129,8 @@ export default function UserManagementScreen() {
   const handleAction = (index: number, user: User) => {
     switch (index) {
       case 0: return void updateUser(user.id, { account_status: 'suspended' })
-      case 1: return void updateUser(user.id, { account_status: 'banned' })
-      case 2: return void updateUser(user.id, { account_status: 'active' })
-      case 3: return void updateUser(user.id, { role: 'minder' })
-      case 4: return void updateUser(user.id, { role: 'customer_support' })
-      case 5: return void updateUser(user.id, { role: 'admin' })
+      case 1: return void updateUser(user.id, { account_status: 'active' })
+      case 2: return void updateUser(user.id, { role: 'customer_support' })
     }
   }
 

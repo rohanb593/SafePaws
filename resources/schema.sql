@@ -17,10 +17,22 @@ CREATE TABLE public.bookings (
   is_recurring boolean NOT NULL DEFAULT false,
   recurring_schedule text,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
+  gps_session_duration_sec integer,
+  gps_session_distance_m numeric,
+  gps_session_ended_at timestamp with time zone,
   CONSTRAINT bookings_pkey PRIMARY KEY (id),
   CONSTRAINT bookings_pet_id_fkey FOREIGN KEY (pet_id) REFERENCES public.pets(id),
   CONSTRAINT bookings_requester_id_fkey FOREIGN KEY (requester_id) REFERENCES public.profiles(id),
   CONSTRAINT bookings_minder_id_fkey FOREIGN KEY (minder_id) REFERENCES public.profiles(id)
+);
+
+-- 1–3 pets per booking; `bookings.pet_id` is the first pet (legacy + embeds). See migration 022_booking_pets.sql.
+CREATE TABLE public.booking_pets (
+  booking_id uuid NOT NULL,
+  pet_id uuid NOT NULL,
+  CONSTRAINT booking_pets_pkey PRIMARY KEY (booking_id, pet_id),
+  CONSTRAINT booking_pets_booking_id_fkey FOREIGN KEY (booking_id) REFERENCES public.bookings(id) ON DELETE CASCADE,
+  CONSTRAINT booking_pets_pet_id_fkey FOREIGN KEY (pet_id) REFERENCES public.pets(id) ON DELETE CASCADE
 );
 
 CREATE TABLE public.calendars (

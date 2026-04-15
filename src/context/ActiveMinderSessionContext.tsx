@@ -9,8 +9,9 @@ import React, {
 } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 
+import type { GPSTrackingHandle } from '@/src/hooks/useGPS'
 import { startGPSTracking } from '@/src/hooks/useGPS'
-import { updateBookingStatus } from '@/src/hooks/useBookings'
+import { completeBookingWithGpsSession } from '@/src/hooks/useBookings'
 import { AppDispatch, RootState } from '@/src/store'
 
 type Coords = { latitude: number; longitude: number }
@@ -39,7 +40,8 @@ export function ActiveMinderSessionProvider({ children }: { children: React.Reac
   const [sessionStartedAtMs, setSessionStartedAtMs] = useState<number | null>(null)
   const [lastCoords, setLastCoords] = useState<Coords | null>(null)
 
-  const stopGpsRef = useRef<(() => void) | null>(null)
+  const gpsHandleRef = useRef<GPSTrackingHandle | null>(null)
+  const sessionStartedAtRef = useRef<number | null>(null)
   const activeBookingIdRef = useRef<string | null>(null)
 
   useEffect(() => {
@@ -47,12 +49,13 @@ export function ActiveMinderSessionProvider({ children }: { children: React.Reac
   }, [activeBookingId])
 
   const clearGpsOnly = useCallback(() => {
-    stopGpsRef.current?.()
-    stopGpsRef.current = null
+    gpsHandleRef.current?.stop()
+    gpsHandleRef.current = null
   }, [])
 
   const resetState = useCallback(() => {
     clearGpsOnly()
+    sessionStartedAtRef.current = null
     setActiveBookingId(null)
     setSessionStartedAtMs(null)
     setLastCoords(null)
@@ -66,16 +69,18 @@ export function ActiveMinderSessionProvider({ children }: { children: React.Reac
 
   const beginOrContinueSession = useCallback(
     (bookingId: string) => {
-      if (activeBookingIdRef.current === bookingId && stopGpsRef.current) {
+      if (activeBookingIdRef.current === bookingId && gpsHandleRef.current) {
         return
       }
 
       clearGpsOnly()
+      const started = Date.now()
+      sessionStartedAtRef.current = started
       setActiveBookingId(bookingId)
-      setSessionStartedAtMs(Date.now())
+      setSessionStartedAtMs(started)
       setLastCoords(null)
 
-      stopGpsRef.current = startGPSTracking(bookingId, {
+      gpsHandleRef.current = startGPSTracking(bookingId, {
         onLocation: (latitude, longitude) => {
           setLastCoords({ latitude, longitude })
         },
@@ -88,13 +93,24 @@ export function ActiveMinderSessionProvider({ children }: { children: React.Reac
     const id = activeBookingIdRef.current
     if (!id) return { error: null }
 
+    const startedAt = sessionStartedAtRef.current
+    const distanceM = gpsHandleRef.current?.getDistanceMeters() ?? 0
     clearGpsOnly()
+    sessionStartedAtRef.current = null
     setActiveBookingId(null)
     setSessionStartedAtMs(null)
     setLastCoords(null)
 
+    const durationSec =
+      startedAt != null ? Math.max(0, Math.round((Date.now() - startedAt) / 1000)) : 0
+    const endedAt = new Date().toISOString()
+
     try {
-      await updateBookingStatus(dispatch, id, 'completed')
+      await completeBookingWithGpsSession(dispatch, id, {
+        durationSec,
+        distanceM,
+        endedAt,
+      })
       return { error: null }
     } catch (err: unknown) {
       const error = err instanceof Error ? err : new Error('Failed to complete booking')

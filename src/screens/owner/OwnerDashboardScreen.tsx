@@ -21,6 +21,7 @@ import Button from '@/src/components/common/Button'
 import BookingCard from '@/src/components/booking/BookingCard'
 import PetCard from '@/src/components/pet/PetCard'
 import { useActiveMinderSession } from '@/src/context/ActiveMinderSessionContext'
+import { bookingFinishedRecencyMs } from '@/src/utils/bookingRecency'
 
 export default function OwnerDashboardScreen() {
   const navigation = useNavigation<NavigationProp<ParamListBase>>()
@@ -57,7 +58,7 @@ export default function OwnerDashboardScreen() {
 
       const { data: bookingsData, error: bookingsError } = await supabase
         .from('bookings')
-        .select('*, pet:pet_id(*), minder:minder_id(*)')
+        .select('*, pet:pet_id(*), booking_pets(pets(*)), minder:minder_id(*)')
         .eq('requester_id', user.id)
         .in('status', ['pending', 'confirmed'])
         .order('start_time', { ascending: true })
@@ -67,7 +68,7 @@ export default function OwnerDashboardScreen() {
 
       const { data: incomingData, error: incomingError } = await supabase
         .from('bookings')
-        .select('*, pet:pet_id(*), requester:requester_id(*)')
+        .select('*, pet:pet_id(*), booking_pets(pets(*)), requester:requester_id(*)')
         .eq('minder_id', user.id)
         .eq('status', 'pending')
         .order('created_at', { ascending: false })
@@ -90,17 +91,19 @@ export default function OwnerDashboardScreen() {
 
       const { data: recentData, error: recentError } = await supabase
         .from('bookings')
-        .select('*, pet:pet_id(*), minder:minder_id(*)')
+        .select('*, pet:pet_id(*), booking_pets(pets(*)), minder:minder_id(*)')
         .eq('requester_id', user.id)
         .eq('status', 'completed')
-        .order('end_time', { ascending: false })
-        .limit(20)
+        .limit(50)
 
       if (recentError) {
         console.warn('Recent bookings:', recentError)
         setRecentFinished([])
       } else {
-        setRecentFinished((recentData ?? []) as BookingWithDetails[])
+        const rows = ((recentData ?? []) as BookingWithDetails[]).sort(
+          (a, b) => bookingFinishedRecencyMs(b) - bookingFinishedRecencyMs(a)
+        )
+        setRecentFinished(rows.slice(0, 20))
       }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Failed to load dashboard'

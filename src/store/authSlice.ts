@@ -7,6 +7,8 @@ interface AuthState {
   user: User | null
   role: User['role'] | null
   isAuthenticated: boolean
+  /** True while user is finishing forgot-password (OTP verified, must set new password). Keeps auth stack mounted. */
+  completingPasswordReset: boolean
   loading: boolean
   error: string | null
 }
@@ -15,6 +17,7 @@ const initialState: AuthState = {
   user: null,
   role: null,
   isAuthenticated: false,
+  completingPasswordReset: false,
   loading: false,
   error: null,
 }
@@ -35,7 +38,11 @@ const authSlice = createSlice({
       state.user = null
       state.role = null
       state.isAuthenticated = false
+      state.completingPasswordReset = false
       state.error = null
+    },
+    setCompletingPasswordReset(state, action: PayloadAction<boolean>) {
+      state.completingPasswordReset = action.payload
     },
     setLoading(state, action: PayloadAction<boolean>) {
       state.loading = action.payload
@@ -46,5 +53,6 @@ const authSlice = createSlice({
   },
 })
 
-export const { setUser, setRole, logout, setLoading, setError } = authSlice.actions
+export const { setUser, setRole, logout, setLoading, setError, setCompletingPasswordReset } =
+  authSlice.actions
 export default authSlice.reducer

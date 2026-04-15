@@ -10,7 +10,6 @@ import { RootState } from '../../store'
 import type { BookingStatus } from '../../types/Booking'
 import type { User } from '../../types/User'
 import Avatar from '../../components/common/Avatar'
-import Button from '../../components/common/Button'
 import BookingStatusBadge from '../../components/booking/BookingStatusBadge'
 import LoadingSpinner from '../../components/common/LoadingSpinner'
 import { formatDateRange } from '../../utils/formatDate'
@@ -23,6 +22,7 @@ type BookingRow = {
   end_time: string
   status: string
   pet?: { name: string | null } | { name: string | null }[] | null
+  booking_pets?: Array<{ pets?: { name: string | null } | { name: string | null }[] | null }>
   minder: User | User[] | null
   requester: User | User[] | null
 }
@@ -50,6 +50,21 @@ function onePetName(pet: BookingRow['pet']): string | null {
   const p = Array.isArray(pet) ? pet[0] : pet
   const n = p?.name?.trim()
   return n || null
+}
+
+function petNamesFromBookingRow(b: BookingRow): string | null {
+  const rows = b.booking_pets
+  if (rows?.length) {
+    const names = rows
+      .map((row) => {
+        const ref = row.pets
+        const p = Array.isArray(ref) ? ref[0] : ref
+        return p?.name?.trim() || null
+      })
+      .filter((n): n is string => Boolean(n))
+    if (names.length > 0) return names.join(', ')
+  }
+  return onePetName(b.pet)
 }
 
 function isPastBooking(b: { status: string; end_time: string }) {
@@ -87,7 +102,7 @@ export default function PastBookingPeopleScreen() {
       let query = supabase
         .from('bookings')
         .select(
-          'id, start_time, end_time, status, pet:pet_id(name), minder:minder_id(*), requester:requester_id(*)'
+          'id, start_time, end_time, status, pet:pet_id(name), booking_pets(pets(name)), minder:minder_id(*), requester:requester_id(*)'
         )
         .order('end_time', { ascending: false })
       query =
@@ -114,7 +129,7 @@ export default function PastBookingPeopleScreen() {
           start_time: b.start_time,
           end_time: b.end_time,
           status: asBookingStatus(b.status),
-          petName: onePetName(b.pet),
+          petName: petNamesFromBookingRow(b),
         })
       }
 
@@ -170,10 +185,6 @@ export default function PastBookingPeopleScreen() {
     }
   }
 
-  const openSupport = () => {
-    ;(navigation as { navigate: (n: string) => void }).navigate('CreateTicket')
-  }
-
   if (loading) return <LoadingSpinner fullScreen />
 
   return (
@@ -185,14 +196,6 @@ export default function PastBookingPeopleScreen() {
       >
         <Text style={styles.title}>{title}</Text>
         <Text style={styles.sub}>{emptyHint}</Text>
-
-        <View style={styles.supportCard}>
-          <Text style={styles.supportTitle}>Customer support</Text>
-          <Text style={styles.supportSub}>
-            Questions about a booking, payments, or your account? Send us a ticket and we’ll help.
-          </Text>
-          <Button label="Open a support ticket" onPress={openSupport} />
-        </View>
 
         {sections.length === 0 ? (
           <View style={styles.emptyWrap}>
@@ -269,26 +272,6 @@ const styles = StyleSheet.create({
     color: '#666',
     marginBottom: 16,
     lineHeight: 20,
-  },
-  supportCard: {
-    backgroundColor: '#fff',
-    borderRadius: 14,
-    padding: 16,
-    marginBottom: 20,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-  },
-  supportTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#1b4332',
-    marginBottom: 6,
-  },
-  supportSub: {
-    fontSize: 13,
-    color: '#64748b',
-    lineHeight: 18,
-    marginBottom: 14,
   },
   personCard: {
     backgroundColor: '#fff',

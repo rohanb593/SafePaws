@@ -28,14 +28,6 @@ const TABS: { label: string; value: TicketStatus | 'all' | 'open' }[] = [
   { label: 'Closed', value: 'closed' },
 ]
 
-const PRIORITY_ORDER = { high: 0, medium: 1, low: 2 }
-
-function priorityVariant(p: string) {
-  if (p === 'high') return 'danger' as const
-  if (p === 'medium') return 'warning' as const
-  return 'neutral' as const
-}
-
 function statusVariant(s: string) {
   if (s === 'opened') return 'info' as const
   if (s === 'closed') return 'neutral' as const
@@ -94,10 +86,7 @@ export default function TicketQueueScreen() {
       return t.status === activeTab
     })
     .slice()
-    .sort(
-      (a, b) =>
-        (PRIORITY_ORDER[a.priority] ?? 1) - (PRIORITY_ORDER[b.priority] ?? 1)
-    )
+    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
 
   const renderTicket = ({ item }: { item: Ticket }) => (
     <TouchableOpacity
@@ -106,7 +95,6 @@ export default function TicketQueueScreen() {
     >
       <View style={styles.cardTop}>
         <Badge label={item.category} variant="info" />
-        <Badge label={item.priority} variant={priorityVariant(item.priority)} />
       </View>
       <Text style={styles.queryType} numberOfLines={1}>{item.query_type}</Text>
       {item.user && (

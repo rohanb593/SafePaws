@@ -2,6 +2,7 @@ export type TicketStatus = 'pending' | 'opened' | 'closed'
 
 export type TicketCategory = 'general' | 'booking' | 'payment' | 'account' | 'safety'
 
+/** Legacy DB column; not set or shown in the app. */
 export type TicketPriority = 'low' | 'medium' | 'high'
 
 /** Joined from `by_user` when fetching admin ticket lists */
@@ -15,7 +16,8 @@ export interface Ticket {
   id: string
   query_type: string
   status: TicketStatus
-  priority: TicketPriority
+  /** Present on legacy rows; not used in UI. */
+  priority?: TicketPriority | null
   by_user: string
   category: TicketCategory
   issue_description: string
@@ -30,5 +32,4 @@ export interface NewTicketInput {
   category: TicketCategory
   issue_description: string
   by_user: string
-  priority: TicketPriority
 }

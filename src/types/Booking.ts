@@ -19,10 +19,22 @@ export interface Booking {
   start_time: string
   end_time: string
   created_at: string
+  /** Set when minder ends live GPS session (walk tracking). */
+  gps_session_duration_sec?: number | null
+  gps_session_distance_m?: number | null
+  gps_session_ended_at?: string | null
+}
+
+/** Row from `booking_pets` with embedded `pets` (Supabase FK hint). */
+export interface BookingPetRow {
+  pet_id: string
+  pets?: Pet | Pet[] | null
 }
 
 export interface BookingWithDetails extends Booking {
   pet?: Pet
+  /** When present, lists all pets on the booking (1–3). */
+  booking_pets?: BookingPetRow[]
   minder?: User
   requester?: User
 }

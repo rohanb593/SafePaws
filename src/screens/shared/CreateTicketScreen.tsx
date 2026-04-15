@@ -13,7 +13,7 @@ import { useDispatch, useSelector } from 'react-redux'
 
 import { AppDispatch, RootState } from '../../store'
 import { createTicket } from '../../hooks/useTickets'
-import { TicketCategory, TicketPriority } from '../../types/Ticket'
+import { TicketCategory } from '../../types/Ticket'
 import Input from '../../components/common/Input'
 import Button from '../../components/common/Button'
 import LoadingSpinner from '../../components/common/LoadingSpinner'
@@ -52,7 +52,6 @@ export default function CreateTicketScreen() {
       category,
       issue_description: description.trim(),
       by_user: currentUser.id,
-      priority: 'medium' as TicketPriority,
     })
     setLoading(false)
     if (ticket) {

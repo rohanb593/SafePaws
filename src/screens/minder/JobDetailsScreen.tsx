@@ -14,6 +14,7 @@ import BookingStatusBadge from '@/src/components/booking/BookingStatusBadge'
 import MedicalRecordCard from '@/src/components/pet/MedicalRecordCard'
 import { formatDateTime, formatRelativeTime } from '@/src/utils/formatDate'
 import { dmThreadId } from '@/src/utils/threadId'
+import { petsFromBooking } from '@/src/utils/bookingPets'
 
 type RouteParams = { bookingId: string }
 
@@ -23,7 +24,7 @@ export default function JobDetailsScreen() {
   const route = useRoute()
   const { bookingId } = route.params as RouteParams
   const [booking, setBooking] = useState<BookingWithDetails | null>(null)
-  const [medicalRecord, setMedicalRecord] = useState<MedicalRecord | null>(null)
+  const [medicalRecords, setMedicalRecords] = useState<MedicalRecord[]>([])
   const [expanded, setExpanded] = useState(false)
   const [loading, setLoading] = useState(true)
   const [updating, setUpdating] = useState(false)
@@ -35,7 +36,7 @@ export default function JobDetailsScreen() {
     try {
       const { data, error: bookingError } = await supabase
         .from('bookings')
-        .select('*, pet:pet_id(*), requester:requester_id(*)')
+        .select('*, pet:pet_id(*), booking_pets(pets(*)), requester:requester_id(*)')
         .eq('id', bookingId)
         .single()
 
@@ -43,14 +44,14 @@ export default function JobDetailsScreen() {
       const typedBooking = data as BookingWithDetails
       setBooking(typedBooking)
 
-      const petId = typedBooking.pet_id
-      if (petId) {
-        const { data: medData } = await supabase
-          .from('medical_records')
-          .select('*')
-          .eq('pet_id', petId)
-          .maybeSingle()
-        setMedicalRecord((medData as MedicalRecord | null) ?? null)
+      const petList = petsFromBooking(typedBooking)
+      const petIds =
+        petList.length > 0 ? petList.map((p) => p.id) : [typedBooking.pet_id].filter(Boolean)
+      if (petIds.length > 0) {
+        const { data: medRows } = await supabase.from('medical_records').select('*').in('pet_id', petIds)
+        setMedicalRecords((medRows as MedicalRecord[]) ?? [])
+      } else {
+        setMedicalRecords([])
       }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to load booking')
@@ -108,17 +109,27 @@ export default function JobDetailsScreen() {
     )
   }
 
+  const bookingPets = petsFromBooking(booking)
+
   return (
     <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
       <Text style={styles.heading}>Job details</Text>
       <BookingStatusBadge status={booking.status} />
 
       <Card style={styles.block}>
-        <Text style={styles.blockTitle}>Pet</Text>
-        <Text style={styles.line}>
-          {booking.pet?.name || 'Pet'} ({booking.pet?.pet_type || 'Unknown type'})
-        </Text>
-        <Text style={styles.muted}>Breed: {booking.pet?.breed || 'Not specified'}</Text>
+        <Text style={styles.blockTitle}>{bookingPets.length > 1 ? 'Pets' : 'Pet'}</Text>
+        {bookingPets.length === 0 ? (
+          <Text style={styles.line}>—</Text>
+        ) : (
+          bookingPets.map((p) => (
+            <View key={p.id} style={styles.petBlock}>
+              <Text style={styles.line}>
+                {p.name} ({p.pet_type || 'Unknown type'})
+              </Text>
+              <Text style={styles.muted}>Breed: {p.breed || 'Not specified'}</Text>
+            </View>
+          ))
+        )}
       </Card>
 
       <Card style={styles.block}>
@@ -135,14 +146,18 @@ export default function JobDetailsScreen() {
         <Text style={styles.muted}>Location: {booking.location}</Text>
       </Card>
 
-      {medicalRecord ? (
+      {medicalRecords.length > 0 ? (
         <View style={styles.block}>
           <Pressable onPress={() => setExpanded(v => !v)}>
             <Text style={styles.expandTitle}>
-              {expanded ? 'Hide Medical Record' : 'View Medical Record'}
+              {expanded
+                ? 'Hide medical record' + (medicalRecords.length > 1 ? 's' : '')
+                : 'View medical record' + (medicalRecords.length > 1 ? 's' : '')}
             </Text>
           </Pressable>
-          {expanded ? <MedicalRecordCard record={medicalRecord} /> : null}
+          {expanded
+            ? medicalRecords.map((rec) => <MedicalRecordCard key={rec.pet_id} record={rec} />)
+            : null}
         </View>
       ) : null}
 
@@ -174,9 +189,22 @@ export default function JobDetailsScreen() {
         ) : null}
 
         {booking.status === 'completed' ? (
-          <Text style={styles.muted}>
-            Completed {formatRelativeTime(booking.end_time)}. Check your reviews and follow up if needed.
-          </Text>
+          <>
+            <Text style={styles.muted}>
+              Completed {formatRelativeTime(booking.end_time)}. Check your reviews and follow up if needed.
+            </Text>
+            {(booking.gps_session_ended_at != null ||
+              booking.gps_session_duration_sec != null ||
+              booking.gps_session_distance_m != null) && (
+              <Button
+                label="View session summary"
+                variant="secondary"
+                onPress={() =>
+                  navigation.navigate('SessionSummary', { bookingId: booking.id })
+                }
+              />
+            )}
+          </>
         ) : null}
       </View>
     </ScrollView>
@@ -193,6 +221,7 @@ const styles = StyleSheet.create({
   blockTitle: { fontSize: 16, fontWeight: '700', color: '#111', marginBottom: 8 },
   line: { fontSize: 15, color: '#222', marginBottom: 4 },
   muted: { fontSize: 14, color: '#666', marginBottom: 3 },
+  petBlock: { marginBottom: 10 },
   expandTitle: { fontSize: 16, fontWeight: '700', color: '#2E7D32', marginVertical: 8 },
   actions: { marginTop: 18, gap: 8 },
 })

@@ -18,6 +18,7 @@ import BookingCard from '@/src/components/booking/BookingCard'
 import Card from '@/src/components/common/Card'
 import Rating from '@/src/components/common/Rating'
 import { useActiveMinderSession } from '@/src/context/ActiveMinderSessionContext'
+import { bookingFinishedRecencyMs } from '@/src/utils/bookingRecency'
 
 export default function MinderDashboardScreen() {
   const navigation = useNavigation<NavigationProp<ParamListBase>>()
@@ -92,7 +93,7 @@ export default function MinderDashboardScreen() {
     () =>
       [...bookings]
         .filter(b => b.status === 'completed')
-        .sort((a, b) => +new Date(b.end_time) - +new Date(a.end_time))
+        .sort((a, b) => bookingFinishedRecencyMs(b) - bookingFinishedRecencyMs(a))
         .slice(0, 15),
     [bookings]
   )

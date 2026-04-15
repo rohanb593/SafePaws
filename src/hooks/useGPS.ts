@@ -3,6 +3,7 @@ import * as Location from 'expo-location'
 import type { RealtimeChannel } from '@supabase/supabase-js'
 
 import { supabase } from '../lib/supabase'
+import { haversineKm } from '../utils/geocodePostcode'
 
 /**
  * Push the latest coordinates for a booking (minder device → Supabase).
@@ -32,14 +33,38 @@ export type GPSTrackingOptions = {
   onLocation?: (latitude: number, longitude: number) => void
 }
 
+export type GPSTrackingHandle = {
+  stop: () => void
+  /** Approximate path length from consecutive GPS samples (metres). */
+  getDistanceMeters: () => number
+}
+
 /**
- * Start watching GPS and sync to Supabase every ~30s (NF3).
- * Returns a cleanup function that stops the watcher.
+ * Start watching GPS and sync to Supabase on each sample (~30s / 5m movement).
+ * Returns a handle with `stop` and `getDistanceMeters` for session summary.
  */
-export function startGPSTracking(bookingId: string, options?: GPSTrackingOptions): () => void {
+export function startGPSTracking(bookingId: string, options?: GPSTrackingOptions): GPSTrackingHandle {
   let cancelled = false
   let subscription: Location.LocationSubscription | null = null
   const { onLocation } = options ?? {}
+
+  let totalMeters = 0
+  let last: { latitude: number; longitude: number } | null = null
+
+  const addSegment = (latitude: number, longitude: number) => {
+    if (last) {
+      totalMeters += haversineKm(last.latitude, last.longitude, latitude, longitude) * 1000
+    }
+    last = { latitude, longitude }
+  }
+
+  const stop = () => {
+    cancelled = true
+    subscription?.remove()
+    subscription = null
+  }
+
+  const getDistanceMeters = () => totalMeters
 
   void (async () => {
     const { status } = await Location.requestForegroundPermissionsAsync()
@@ -63,6 +88,7 @@ export function startGPSTracking(bookingId: string, options?: GPSTrackingOptions
       })
       if (cancelled) return
       const { latitude, longitude } = current.coords
+      last = { latitude, longitude }
       onLocation?.(latitude, longitude)
       await updateGPSLocation(bookingId, latitude, longitude)
     } catch (e) {
@@ -79,6 +105,7 @@ export function startGPSTracking(bookingId: string, options?: GPSTrackingOptions
       },
       (loc) => {
         const { latitude, longitude } = loc.coords
+        addSegment(latitude, longitude)
         onLocation?.(latitude, longitude)
         void updateGPSLocation(bookingId, latitude, longitude)
       }
@@ -90,11 +117,7 @@ export function startGPSTracking(bookingId: string, options?: GPSTrackingOptions
     }
   })()
 
-  return () => {
-    cancelled = true
-    subscription?.remove()
-    subscription = null
-  }
+  return { stop, getDistanceMeters }
 }
 
 /**

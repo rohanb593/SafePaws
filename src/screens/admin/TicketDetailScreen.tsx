@@ -74,7 +74,6 @@ export default function TicketDetailScreen() {
       updateTicket({
         id: row.id,
         status: row.status,
-        priority: row.priority,
         query_type: row.query_type,
         issue_description: row.issue_description,
         updated_at: row.updated_at,
@@ -141,10 +140,6 @@ export default function TicketDetailScreen() {
           <Badge label={localTicket.status} variant={
             localTicket.status === 'opened' ? 'info' :
             localTicket.status === 'closed' ? 'neutral' : 'warning'
-          } />
-          <Badge label={localTicket.priority} variant={
-            localTicket.priority === 'high' ? 'danger' :
-            localTicket.priority === 'medium' ? 'warning' : 'neutral'
           } />
           <Badge label={localTicket.category} variant="info" />
         </View>

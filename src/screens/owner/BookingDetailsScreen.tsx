@@ -15,6 +15,7 @@ import BookingStatusBadge from '@/src/components/booking/BookingStatusBadge'
 import MedicalRecordCard from '@/src/components/pet/MedicalRecordCard'
 import { formatDateTime, formatDuration } from '@/src/utils/formatDate'
 import { dmThreadId } from '@/src/utils/threadId'
+import { petsFromBooking } from '@/src/utils/bookingPets'
 
 interface RouteParams {
   bookingId: string
@@ -27,7 +28,7 @@ export default function BookingDetailsScreen() {
   const { bookingId } = route.params as RouteParams
 
   const [booking, setBooking] = useState<BookingWithDetails | null>(null)
-  const [medicalRecord, setMedicalRecord] = useState<MedicalRecord | null>(null)
+  const [medicalRecords, setMedicalRecords] = useState<MedicalRecord[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -38,22 +39,21 @@ export default function BookingDetailsScreen() {
 
       const { data: bookingData, error: bookingErr } = await supabase
         .from('bookings')
-        .select('*, pet:pet_id(*), minder:minder_id(*), requester:requester_id(*)')
+        .select('*, pet:pet_id(*), booking_pets(pets(*)), minder:minder_id(*), requester:requester_id(*)')
         .eq('id', bookingId)
         .single()
 
       if (bookingErr) throw bookingErr
-      setBooking(bookingData as BookingWithDetails)
+      const typed = bookingData as BookingWithDetails
+      setBooking(typed)
 
-      const petId = (bookingData as { pet_id?: string })?.pet_id
-      if (petId) {
-        const { data: medData } = await supabase.from('medical_records').select('*').eq('pet_id', petId).maybeSingle()
-
-        if (medData) {
-          setMedicalRecord(medData as MedicalRecord)
-        } else {
-          setMedicalRecord(null)
-        }
+      const petList = petsFromBooking(typed)
+      const petIds = petList.length > 0 ? petList.map((p) => p.id) : [(bookingData as { pet_id?: string }).pet_id!].filter(Boolean)
+      if (petIds.length > 0) {
+        const { data: medRows } = await supabase.from('medical_records').select('*').in('pet_id', petIds)
+        setMedicalRecords((medRows as MedicalRecord[]) ?? [])
+      } else {
+        setMedicalRecords([])
       }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Failed to load booking'
@@ -97,7 +97,14 @@ export default function BookingDetailsScreen() {
     )
   }
 
-  const { pet, minder, status, start_time, end_time, location } = booking
+  const pets = petsFromBooking(booking)
+  const { minder, status, start_time, end_time, location } = booking
+
+  const hasSessionSummary =
+    status === 'completed' &&
+    (booking.gps_session_ended_at != null ||
+      booking.gps_session_duration_sec != null ||
+      booking.gps_session_distance_m != null)
 
   return (
     <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
@@ -111,10 +118,16 @@ export default function BookingDetailsScreen() {
       <Card>
         <Text style={styles.cardTitle}>Booking details</Text>
         <View style={styles.detailBlock}>
-          <Text style={styles.label}>Pet</Text>
-          <Text style={styles.value}>
-            {pet?.name} ({pet?.pet_type})
-          </Text>
+          <Text style={styles.label}>{pets.length > 1 ? 'Pets' : 'Pet'}</Text>
+          {pets.length === 0 ? (
+            <Text style={styles.value}>—</Text>
+          ) : (
+            pets.map((p) => (
+              <Text key={p.id} style={styles.value}>
+                {p.name} ({p.pet_type})
+              </Text>
+            ))
+          )}
         </View>
         <View style={styles.detailBlock}>
           <Text style={styles.label}>Minder</Text>
@@ -133,10 +146,12 @@ export default function BookingDetailsScreen() {
         </View>
       </Card>
 
-      {medicalRecord ? (
+      {medicalRecords.length > 0 ? (
         <View style={styles.block}>
-          <Text style={styles.sectionTitle}>Pet medical record</Text>
-          <MedicalRecordCard record={medicalRecord} />
+          <Text style={styles.sectionTitle}>Pet medical record{medicalRecords.length > 1 ? 's' : ''}</Text>
+          {medicalRecords.map((rec) => (
+            <MedicalRecordCard key={rec.pet_id} record={rec} />
+          ))}
         </View>
       ) : null}
 
@@ -165,15 +180,24 @@ export default function BookingDetailsScreen() {
         ) : null}
 
         {status === 'completed' ? (
-          <Button
-            label="Leave review"
-            onPress={() =>
-              navigation.navigate('LeaveReview', {
-                bookingId,
-                revieweeId: minder?.id,
-              })
-            }
-          />
+          <>
+            {hasSessionSummary ? (
+              <Button
+                label="View session summary"
+                variant="secondary"
+                onPress={() => navigation.navigate('SessionSummary', { bookingId })}
+              />
+            ) : null}
+            <Button
+              label="Leave review"
+              onPress={() =>
+                navigation.navigate('LeaveReview', {
+                  bookingId,
+                  revieweeId: minder?.id,
+                })
+              }
+            />
+          </>
         ) : null}
 
         {status === 'cancelled' ? (

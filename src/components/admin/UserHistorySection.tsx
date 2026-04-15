@@ -67,7 +67,6 @@ export default function UserHistorySection({ userId, compact, excludeTicketId }:
           <View key={b.id} style={styles.lineItem}>
             <Text style={styles.lineMain} numberOfLines={1}>
               {b.pet?.name ?? 'Pet'} · {b.status}
-              {b.requester_id === userId ? ' · as owner' : ' · as minder'}
             </Text>
             <Text style={styles.lineSub} numberOfLines={1}>
               {formatDateTime(b.start_time)}

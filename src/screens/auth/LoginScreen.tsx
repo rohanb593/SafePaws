@@ -3,12 +3,15 @@
 import React, { useState } from 'react'
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
+import { useDispatch } from 'react-redux'
 import Input from '../../components/common/Input'
 import Button from '../../components/common/Button'
 import { useAuth } from '../../hooks/useAuth'
+import { setCompletingPasswordReset } from '../../store/authSlice'
 import { isValidEmail, isRequired } from '../../utils/validators'
 
 export default function LoginScreen({ navigation }: any) {
+  const dispatch = useDispatch()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({})
@@ -25,7 +28,8 @@ export default function LoginScreen({ navigation }: any) {
 
   async function handleLogin() {
     if (!validate()) return
-    await login(email, password)
+    const ok = await login(email, password)
+    if (ok) dispatch(setCompletingPasswordReset(false))
     // Navigation handled by AppNavigator reacting to isAuthenticated in Redux store
   }
 

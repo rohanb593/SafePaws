@@ -3,12 +3,15 @@
 import React, { useState } from 'react'
 import { View, Text, StyleSheet } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
+import { useDispatch } from 'react-redux'
 import Input from '../../components/common/Input'
 import Button from '../../components/common/Button'
 import { useAuth } from '../../hooks/useAuth'
+import { setCompletingPasswordReset } from '../../store/authSlice'
 import { isValidPassword } from '../../utils/validators'
 
-export default function NewPasswordScreen({ navigation }: any) {
+export default function NewPasswordScreen() {
+  const dispatch = useDispatch()
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
   const [passwordError, setPasswordError] = useState('')
@@ -32,7 +35,10 @@ export default function NewPasswordScreen({ navigation }: any) {
     if (!valid) return
 
     const ok = await updatePassword(password)
-    if (ok) navigation.navigate('Login')
+    if (ok) {
+      dispatch(setCompletingPasswordReset(false))
+      // Session from OTP is already active; root navigator switches to the main app.
+    }
   }
 
   return (

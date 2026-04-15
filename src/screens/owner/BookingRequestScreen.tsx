@@ -43,7 +43,8 @@ export default function BookingRequestScreen() {
   const { minderId } = route.params as RouteParams
 
   const [pets, setPets] = useState<Pet[]>([])
-  const [selectedPetId, setSelectedPetId] = useState<string | null>(null)
+  /** Up to 3 pets per booking request. */
+  const [selectedPetIds, setSelectedPetIds] = useState<string[]>([])
   const [minder, setMinder] = useState<User | null>(null)
   const [minderHourlyRate, setMinderHourlyRate] = useState(0)
   /** Comma-separated from `listings.animal` — restricts which owner pets can be booked. */
@@ -130,10 +131,16 @@ export default function BookingRequestScreen() {
   }, [pets, allowedPetTypes])
 
   useEffect(() => {
-    if (selectedPetId && !eligiblePets.some((p) => p.id === selectedPetId)) {
-      setSelectedPetId(null)
-    }
-  }, [eligiblePets, selectedPetId])
+    setSelectedPetIds((prev) => prev.filter((id) => eligiblePets.some((p) => p.id === id)))
+  }, [eligiblePets])
+
+  const togglePetSelection = (petId: string) => {
+    setSelectedPetIds((prev) => {
+      if (prev.includes(petId)) return prev.filter((id) => id !== petId)
+      if (prev.length >= 3) return prev
+      return [...prev, petId]
+    })
+  }
 
   const bookingStart = useMemo(() => {
     if (!rangeStart) return null
@@ -163,7 +170,14 @@ export default function BookingRequestScreen() {
   }, [rangeStart, rangeEnd])
 
   const isFormValid = Boolean(
-    selectedPetId && rangeStart && rangeEnd && bookingStart && bookingEnd && location.trim() && !timeRangeError
+    selectedPetIds.length >= 1 &&
+      selectedPetIds.length <= 3 &&
+      rangeStart &&
+      rangeEnd &&
+      bookingStart &&
+      bookingEnd &&
+      location.trim() &&
+      !timeRangeError
   )
 
   const handleSubmit = async () => {
@@ -174,7 +188,7 @@ export default function BookingRequestScreen() {
       setError(null)
 
       const booking = {
-        pet_id: selectedPetId!,
+        pet_ids: selectedPetIds,
         requester_id: user.id,
         minder_id: minderId,
         location: location.trim(),
@@ -225,7 +239,15 @@ export default function BookingRequestScreen() {
         </Card>
       ) : null}
 
-      <Text style={styles.sectionTitle}>1. Select your pet</Text>
+      <Text style={styles.sectionTitle}>1. Select your pet(s)</Text>
+      <Text style={styles.helperText}>
+        Tap pets to include in this booking — you can choose up to three.
+      </Text>
+      {selectedPetIds.length > 0 ? (
+        <Text style={styles.selectionCount}>
+          {selectedPetIds.length} of 3 pet{selectedPetIds.length === 1 ? '' : 's'} selected
+        </Text>
+      ) : null}
       {allowedPetTypes != null && allowedPetTypes.length > 0 ? (
         <Text style={styles.filterHint}>
           This minder&apos;s listing is for: {allowedPetTypes.join(', ')}. Only matching pets are shown.
@@ -250,8 +272,8 @@ export default function BookingRequestScreen() {
             <PetCard
               key={pet.id}
               pet={pet}
-              selected={selectedPetId === pet.id}
-              onPress={() => setSelectedPetId(pet.id)}
+              selected={selectedPetIds.includes(pet.id)}
+              onPress={() => togglePetSelection(pet.id)}
             />
           ))
         )}
@@ -346,6 +368,12 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   helperText: { fontSize: 13, color: '#555', marginBottom: 10, lineHeight: 18 },
+  selectionCount: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#2E7D32',
+    marginBottom: 8,
+  },
   rangeHint: { fontSize: 14, color: '#333', marginTop: 4, marginBottom: 8, fontWeight: '600' },
   timeError: { fontSize: 13, color: '#c0392b', marginBottom: 8 },
   priceCard: { backgroundColor: '#E3F2FD', marginTop: 8 },

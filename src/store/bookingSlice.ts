@@ -41,6 +41,10 @@ const bookingSlice = createSlice({
       const booking = state.bookings.find(b => b.id === action.payload.id)
       if (booking) booking.status = action.payload.status
     },
+    updateBookingFields(state, action: PayloadAction<{ id: string; fields: Partial<Booking> }>) {
+      const booking = state.bookings.find(b => b.id === action.payload.id)
+      if (booking) Object.assign(booking, action.payload.fields)
+    },
     removeBooking(state, action: PayloadAction<string>) {
       state.bookings = state.bookings.filter(b => b.id !== action.payload)
     },
@@ -66,6 +70,7 @@ export const {
   addBooking,
   addApplication,
   updateBookingStatus,
+  updateBookingFields,
   removeBooking,
   updateApplicationStatus,
   setSelectedBooking,

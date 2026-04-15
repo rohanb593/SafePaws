@@ -57,7 +57,7 @@ export default function SessionScreen() {
     void (async () => {
       const { data: b, error } = await supabase
         .from('bookings')
-        .select('id, location, pet_id, requester_id')
+        .select('id, location, pet_id, requester_id, booking_pets(pet_id)')
         .eq('id', bookingId)
         .single()
 
@@ -68,16 +68,26 @@ export default function SessionScreen() {
         return
       }
 
-      const [{ data: pet }, { data: owner }] = await Promise.all([
-        supabase.from('pets').select('name').eq('id', b.pet_id).maybeSingle(),
+      const bp = (b as { booking_pets?: { pet_id: string }[] | null }).booking_pets
+      const petIds =
+        bp && bp.length > 0 ? bp.map((r) => r.pet_id) : [b.pet_id].filter(Boolean)
+
+      const [{ data: petRows }, { data: owner }] = await Promise.all([
+        petIds.length > 0
+          ? supabase.from('pets').select('name').in('id', petIds)
+          : Promise.resolve({ data: null }),
         supabase.from('profiles').select('display_name').eq('id', b.requester_id).maybeSingle(),
       ])
 
       if (!mounted) return
+      const names =
+        petRows && Array.isArray(petRows) && petRows.length > 0
+          ? petRows.map((r: { name: string }) => r.name).join(', ')
+          : null
       setBooking({
         id: b.id,
         location: b.location,
-        petName: pet?.name ?? null,
+        petName: names,
         ownerName: owner?.display_name ?? null,
       })
       setLoading(false)
@@ -150,7 +160,9 @@ export default function SessionScreen() {
               Alert.alert('Error', error.message)
               return
             }
-            navigation.dispatch(StackActions.popToTop())
+            navigation.dispatch(
+              StackActions.replace('SessionSummary', { bookingId, fromSessionEnd: true })
+            )
           })()
         },
       },

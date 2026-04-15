@@ -4,6 +4,7 @@ import Card from '@/src/components/common/Card'
 import Avatar from '@/src/components/common/Avatar'
 import { formatDateTime, formatDuration } from '@/src/utils/formatDate'
 import BookingStatusBadge from '@/src/components/booking/BookingStatusBadge'
+import { petsFromBooking } from '@/src/utils/bookingPets'
 
 interface BookingCardProps {
   booking: BookingWithDetails
@@ -20,9 +21,15 @@ function petEmoji(petType: string | undefined): string {
 }
 
 export default function BookingCard({ booking, onPress }: BookingCardProps) {
-  const { pet, minder, requester, start_time, end_time, location, status } = booking
+  const { minder, requester, start_time, end_time, location, status } = booking
   const counterparty = minder ?? requester
-  const petLabel = `${petEmoji(pet?.pet_type)} ${pet?.name ?? 'Pet'}`
+  const pets = petsFromBooking(booking)
+  const petLabel =
+    pets.length === 0
+      ? `${petEmoji(undefined)} Pet`
+      : pets.length === 1
+        ? `${petEmoji(pets[0]?.pet_type)} ${pets[0]?.name ?? 'Pet'}`
+        : `${pets.map((p) => `${petEmoji(p?.pet_type)} ${p?.name ?? 'Pet'}`).join(' · ')}`
 
   return (
     <Card onPress={onPress}>

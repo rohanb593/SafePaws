@@ -144,6 +144,22 @@ export default function ProfileScreen({ hideTopSafeArea = false }: ProfileScreen
           />
         </View>
 
+        {!isStaffRole ? (
+          <View style={styles.card}>
+            <Text style={styles.sectionLabel}>Customer support</Text>
+            <Text style={styles.supportHint}>
+              Questions about a booking, payments, or your account? Send us a ticket and we’ll help.
+            </Text>
+            <Button
+              label="Open a support ticket"
+              onPress={() =>
+                (navigation as { navigate: (route: string) => void }).navigate('CreateTicket')
+              }
+              variant="secondary"
+            />
+          </View>
+        ) : null}
+
         {showBookingHistory ? (
           <View style={styles.card}>
             <Text style={styles.sectionLabel}>Booking history</Text>
@@ -271,6 +287,13 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   historyHint: {
+    fontSize: 14,
+    color: '#555',
+    lineHeight: 20,
+    marginBottom: 12,
+    marginTop: 4,
+  },
+  supportHint: {
     fontSize: 14,
     color: '#555',
     lineHeight: 20,

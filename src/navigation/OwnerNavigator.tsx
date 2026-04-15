@@ -25,6 +25,7 @@ import MinderLocationMapScreen from '../screens/owner/MinderLocationMapScreen'
 import JobDetailsScreen from '../screens/minder/JobDetailsScreen'
 import SessionScreen from '../screens/minder/SessionScreen'
 import PastBookingPeopleScreen from '../screens/shared/PastBookingPeopleScreen'
+import SessionSummaryScreen from '../screens/shared/SessionSummaryScreen'
 
 export type OwnerTabParamList = {
   Dashboard: undefined
@@ -53,6 +54,8 @@ export type OwnerStackParamList = {
   JobDetails: { bookingId: string }
   /** Live GPS session (minder) — must exist here when JobDetails is opened from this stack. */
   Session: { bookingId: string }
+  /** After ending GPS session, or from booking details (summary stored on booking row). */
+  SessionSummary: { bookingId: string; fromSessionEnd?: boolean }
   PastBookingPeople: undefined
 }
 
@@ -108,6 +111,11 @@ export default function OwnerNavigator() {
       <Stack.Screen name="MinderLocationMap" component={MinderLocationMapScreen} options={{ headerShown: false }} />
       <Stack.Screen name="JobDetails" component={JobDetailsScreen} options={{ title: 'Booking request' }} />
       <Stack.Screen name="Session" component={SessionScreen} options={{ title: 'Active session', headerShown: false }} />
+      <Stack.Screen
+        name="SessionSummary"
+        component={SessionSummaryScreen}
+        options={{ title: 'Session summary', headerShown: false }}
+      />
       <Stack.Screen name="CreateTicket" component={CreateTicketScreen} />
       <Stack.Screen
         name="PastBookingPeople"

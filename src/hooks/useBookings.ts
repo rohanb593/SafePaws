@@ -14,10 +14,19 @@ import {
   addBooking,
   updateApplicationStatus,
   updateBookingStatus as applyBookingStatus,
+  updateBookingFields,
   setLoading,
   setError,
 } from '@/src/store/bookingSlice'
 import { sendReviewPromptChatAfterCompletion } from '@/src/hooks/useChat'
+
+const SELECT_BOOKING_OWNER = '*, pet:pet_id(*), booking_pets(pets(*)), minder:minder_id(*)'
+const SELECT_BOOKING_MINDER = '*, pet:pet_id(*), booking_pets(pets(*)), requester:requester_id(*)'
+
+export type CreateBookingInput = Omit<Booking, 'id' | 'created_at' | 'status' | 'pet_id'> & {
+  /** 1–3 pets; first becomes `bookings.pet_id` for legacy columns. */
+  pet_ids: string[]
+}
 
 /**
  * Fetch all bookings where the current user is the requester (pet owner).
@@ -29,7 +38,7 @@ export async function fetchOwnerBookings(dispatch: AppDispatch, ownerId: string)
 
     const { data, error } = await supabase
       .from('bookings')
-      .select('*, pet:pet_id(*), minder:minder_id(*)')
+      .select(SELECT_BOOKING_OWNER)
       .eq('requester_id', ownerId)
       .order('start_time', { ascending: true })
 
@@ -52,7 +61,7 @@ export async function fetchMinderBookings(dispatch: AppDispatch, minderId: strin
 
     const { data, error } = await supabase
       .from('bookings')
-      .select('*, pet:pet_id(*), requester:requester_id(*)')
+      .select(SELECT_BOOKING_MINDER)
       .eq('minder_id', minderId)
       .order('start_time', { ascending: true })
 
@@ -73,25 +82,43 @@ export async function fetchMinderBookings(dispatch: AppDispatch, minderId: strin
  */
 export async function createBooking(
   dispatch: AppDispatch,
-  booking: Omit<Booking, 'id' | 'created_at' | 'status'>,
+  booking: CreateBookingInput,
   initialStatus: BookingStatus = 'pending'
 ): Promise<Booking | null> {
   try {
     dispatch(setLoading(true))
     dispatch(setError(null))
 
-    const { data, error } = await supabase
-      .from('bookings')
-      .insert([{ ...booking, status: initialStatus }])
-      .select()
-      .single()
+    const uniqueIds = [...new Set(booking.pet_ids.filter(Boolean))]
+    if (uniqueIds.length < 1 || uniqueIds.length > 3) {
+      dispatch(setError('Select between 1 and 3 pets.'))
+      return null
+    }
+
+    const { pet_ids: _petIds, ...rest } = booking
+    const row = {
+      ...rest,
+      pet_id: uniqueIds[0],
+      status: initialStatus,
+    }
+
+    const { data, error } = await supabase.from('bookings').insert([row]).select().single()
 
     if (error) throw error
+
+    const bookingId = (data as Booking).id
+    const bpRows = uniqueIds.map((pet_id) => ({ booking_id: bookingId, pet_id }))
+    const { error: bpError } = await supabase.from('booking_pets').insert(bpRows)
+
+    if (bpError) {
+      await supabase.from('bookings').delete().eq('id', bookingId)
+      throw bpError
+    }
 
     dispatch(addBooking(data as Booking))
 
     try {
-      await supabase.functions.invoke('notify-minder', { body: { bookingID: data.id } })
+      await supabase.functions.invoke('notify-minder', { body: { bookingID: bookingId } })
     } catch (notifyErr) {
       console.warn('notify-minder invoke skipped or failed:', notifyErr)
     }
@@ -132,6 +159,45 @@ export async function updateBookingStatus(
   } catch (err: unknown) {
     console.error('Failed to update booking status:', err)
     throw err
+  }
+}
+
+/**
+ * Mark booking completed and store GPS session summary (minder ended live tracking).
+ */
+export async function completeBookingWithGpsSession(
+  dispatch: AppDispatch,
+  bookingId: string,
+  summary: { durationSec: number; distanceM: number; endedAt: string }
+): Promise<void> {
+  const { error } = await supabase
+    .from('bookings')
+    .update({
+      status: 'completed',
+      gps_session_duration_sec: summary.durationSec,
+      gps_session_distance_m: summary.distanceM,
+      gps_session_ended_at: summary.endedAt,
+    })
+    .eq('id', bookingId)
+
+  if (error) throw error
+
+  dispatch(
+    updateBookingFields({
+      id: bookingId,
+      fields: {
+        status: 'completed',
+        gps_session_duration_sec: summary.durationSec,
+        gps_session_distance_m: summary.distanceM,
+        gps_session_ended_at: summary.endedAt,
+      },
+    })
+  )
+
+  try {
+    await sendReviewPromptChatAfterCompletion(dispatch, bookingId)
+  } catch (e) {
+    console.warn('[useBookings] review prompt chat', e)
   }
 }
 
@@ -325,7 +391,7 @@ export async function acceptApplication(
     const createdBooking = await createBooking(
       dispatch,
       {
-        pet_id: petId,
+        pet_ids: [petId!],
         requester_id: ownerId,
         minder_id: typedApplication.minder_id,
         location: listing.location ?? '',

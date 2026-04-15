@@ -3,12 +3,15 @@
 import React, { useState } from 'react'
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
+import { useDispatch } from 'react-redux'
 import Input from '../../components/common/Input'
 import Button from '../../components/common/Button'
 import { useAuth } from '../../hooks/useAuth'
+import { setCompletingPasswordReset } from '../../store/authSlice'
 import { isValidEmail, isRequired } from '../../utils/validators'
 
 export default function ForgotPasswordScreen({ navigation }: any) {
+  const dispatch = useDispatch()
   const [email, setEmail] = useState('')
   const [emailError, setEmailError] = useState('')
   const { sendOtp, loading, error } = useAuth()
@@ -18,7 +21,10 @@ export default function ForgotPasswordScreen({ navigation }: any) {
     if (!isValidEmail(email)) { setEmailError('Invalid email'); return }
     setEmailError('')
     const ok = await sendOtp(email)
-    if (ok) navigation.navigate('VerifyOtp', { email })
+    if (ok) {
+      dispatch(setCompletingPasswordReset(true))
+      navigation.navigate('VerifyOtp', { email })
+    }
   }
 
   return (
@@ -29,7 +35,13 @@ export default function ForgotPasswordScreen({ navigation }: any) {
         {error ? <Text style={styles.errorBanner}>{error}</Text> : null}
         <Input label="Email" value={email} onChangeText={setEmail} placeholder="you@example.com" error={emailError} />
         <Button label="Send Code" onPress={handleSendCode} loading={loading} />
-        <TouchableOpacity onPress={() => navigation.navigate('Login')} style={styles.link}>
+        <TouchableOpacity
+          onPress={() => {
+            dispatch(setCompletingPasswordReset(false))
+            navigation.navigate('Login')
+          }}
+          style={styles.link}
+        >
           <Text style={styles.linkText}>Back to Login</Text>
         </TouchableOpacity>
       </View>

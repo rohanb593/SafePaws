@@ -17,6 +17,7 @@ import MinderProfileEditScreen from '../screens/minder/MinderProfileEditScreen'
 import ChatScreen from '../screens/shared/ChatScreen'
 import CreateTicketScreen from '../screens/shared/CreateTicketScreen'
 import PastBookingPeopleScreen from '../screens/shared/PastBookingPeopleScreen'
+import SessionSummaryScreen from '../screens/shared/SessionSummaryScreen'
 import PeerProfileScreen from '../screens/shared/PeerProfileScreen'
 
 export type MinderTabParamList = {
@@ -33,6 +34,7 @@ export type MinderStackParamList = {
   ProfileDetails: undefined
   JobDetails: { bookingId: string }
   Session: { bookingId: string }
+  SessionSummary: { bookingId: string; fromSessionEnd?: boolean }
   MinderProfileEdit: undefined
   Chat: { threadId: string; otherUserId: string }
   CreateTicket: undefined
@@ -83,6 +85,11 @@ export default function MinderNavigator() {
       />
       <Stack.Screen name="JobDetails" component={JobDetailsScreen} />
       <Stack.Screen name="Session" component={SessionScreen} />
+      <Stack.Screen
+        name="SessionSummary"
+        component={SessionSummaryScreen}
+        options={{ title: 'Session summary', headerShown: false }}
+      />
       <Stack.Screen name="MinderProfileEdit" component={MinderProfileEditScreen} />
       <Stack.Screen name="Chat" component={ChatScreen} />
       <Stack.Screen name="CreateTicket" component={CreateTicketScreen} />

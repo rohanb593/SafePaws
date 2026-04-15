@@ -102,7 +102,7 @@ export async function sendTicketDetailsAsSupportChatMessage(
   const body =
     `📩 New support ticket\n` +
     `Title: ${ticket.query_type}\n` +
-    `Category: ${ticket.category} · Priority: ${ticket.priority}\n\n` +
+    `Category: ${ticket.category}\n\n` +
     `${ticket.issue_description}\n\n` +
     `— Ticket ID: ${ticket.id}`
 
