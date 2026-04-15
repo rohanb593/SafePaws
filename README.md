@@ -36,8 +36,10 @@ Restart the dev server after changing `.env`.
 Start the Metro bundler and QR / dev menu:
 
 ```bash
-npm start
+npx expo start
 ```
+
+(`npm start` is equivalent — it runs `expo start` as defined in `package.json`.)
 
 Then:
 
@@ -58,7 +60,7 @@ The `supabase/` folder holds migrations and Edge Functions for this project. To 
 
 ## Troubleshooting
 
-- **Blank Supabase errors or failed requests:** Confirm `.env` exists, variables are spelled exactly as above, and you restarted `npm start`.
+- **Blank Supabase errors or failed requests:** Confirm `.env` exists, variables are spelled exactly as above, and you restarted `npx expo start`.
 - **Session not persisting:** `src/lib/supabase.ts` currently uses in-memory auth storage for minimal native setup. For persistent login across restarts, wire in `AsyncStorage` (or SecureStore) in the `createClient` `auth.storage` option.
 
 ## License

@@ -32,6 +32,8 @@ import {
 } from '../../utils/threadId'
 import { ticketStatusBadgeProps } from '../../utils/ticketStatusUi'
 
+const EMPTY_MESSAGES: ChatMessage[] = []
+
 export default function ChatScreen() {
   const route = useRoute()
   const navigation = useNavigation()
@@ -42,7 +44,7 @@ export default function ChatScreen() {
   const isStaff =
     currentUser?.role === 'admin' || currentUser?.role === 'customer_support'
   const messages = useSelector(
-    (state: RootState) => state.chat.threads[threadId] ?? []
+    (state: RootState) => state.chat.threads[threadId] ?? EMPTY_MESSAGES
   )
   const loading = useSelector((state: RootState) => state.chat.loading)
 
