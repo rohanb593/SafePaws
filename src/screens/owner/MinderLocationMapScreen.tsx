@@ -14,7 +14,10 @@ import { coordinatesForListing, geocodeAddressFallback } from '../../utils/geoco
 export default function MinderLocationMapScreen() {
   const navigation = useNavigation()
   const route = useRoute()
-  const minderId = (route.params as { minderId: string }).minderId
+  const { minderId, listingId: listingIdFromRoute } = route.params as {
+    minderId: string
+    listingId?: string
+  }
 
   const [pins, setPins] = useState<MapPin[]>([])
   const [loading, setLoading] = useState(true)
@@ -25,15 +28,24 @@ export default function MinderLocationMapScreen() {
     setLoading(true)
     setError(null)
     try {
+      const listingQuery = listingIdFromRoute
+        ? supabase
+            .from('listings')
+            .select('id, postcode, location')
+            .eq('id', listingIdFromRoute)
+            .eq('user_id', minderId)
+            .maybeSingle()
+        : supabase
+            .from('listings')
+            .select('id, postcode, location')
+            .eq('user_id', minderId)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle()
+
       const [{ data: profileData }, { data: listingData }] = await Promise.all([
         supabase.from('profiles').select('display_name, username, location').eq('id', minderId).single(),
-        supabase
-          .from('listings')
-          .select('id, postcode, location')
-          .eq('user_id', minderId)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle(),
+        listingQuery,
       ])
 
       const profile = profileData as User | null
@@ -73,7 +85,7 @@ export default function MinderLocationMapScreen() {
     } finally {
       setLoading(false)
     }
-  }, [minderId])
+  }, [minderId, listingIdFromRoute])
 
   useEffect(() => {
     void load()

@@ -175,7 +175,9 @@ export default function SearchMinderScreen({ navigation }: any) {
                     otherUserId: item.user_id,
                   })
                 }}
-                onPress={() => navigation.navigate('MinderProfile', { minderId: item.user_id })}
+                onPress={() =>
+                  navigation.navigate('MinderProfile', { minderId: item.user_id, listingId: item.id })
+                }
               />
             )
           }}

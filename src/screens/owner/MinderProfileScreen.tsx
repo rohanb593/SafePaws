@@ -35,6 +35,8 @@ interface ReviewWithReviewer extends Review {
 export default function MinderProfileScreen({ navigation, route }: any) {
   const currentUserId = useSelector((state: RootState) => state.auth.user?.id)
   const minderId: string = route.params?.minderId
+  /** When set (e.g. from search), show this listing — not only the minder's newest listing. */
+  const listingIdFromRoute: string | undefined = route.params?.listingId
 
   const [loading, setLoading] = useState(true)
   const [profile, setProfile] = useState<User | null>(null)
@@ -56,15 +58,24 @@ export default function MinderProfileScreen({ navigation, route }: any) {
     const load = async () => {
       setLoading(true)
 
+      const listingQuery = listingIdFromRoute
+        ? supabase
+            .from('listings')
+            .select('*')
+            .eq('id', listingIdFromRoute)
+            .eq('user_id', minderId)
+            .maybeSingle()
+        : supabase
+            .from('listings')
+            .select('*')
+            .eq('user_id', minderId)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle()
+
       const [{ data: profileData }, { data: listingData }, { data: reviewData }] = await Promise.all([
         supabase.from('profiles').select('*').eq('id', minderId).single(),
-        supabase
-          .from('listings')
-          .select('*')
-          .eq('user_id', minderId)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle(),
+        listingQuery,
         supabase
           .from('reviews')
           .select('*, reviewer:reviewer_id(display_name, username)')
@@ -90,7 +101,7 @@ export default function MinderProfileScreen({ navigation, route }: any) {
     }
 
     load()
-  }, [currentUserId, minderId])
+  }, [currentUserId, minderId, listingIdFromRoute])
 
   const toggleFavourite = async () => {
     if (!currentUserId) return
@@ -136,7 +147,12 @@ export default function MinderProfileScreen({ navigation, route }: any) {
           <Button
             label="Show location on map"
             variant="secondary"
-            onPress={() => navigation.navigate('MinderLocationMap', { minderId })}
+            onPress={() =>
+              navigation.navigate('MinderLocationMap', {
+                minderId,
+                ...(listing?.id ? { listingId: listing.id } : {}),
+              })
+            }
             disabled={!canShowMap}
           />
         </View>

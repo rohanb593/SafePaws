@@ -38,7 +38,7 @@ export type OwnerStackParamList = {
   OwnerTabs: undefined
   Profile: undefined
   ProfileDetails: undefined
-  MinderProfile: { minderId: string }
+  MinderProfile: { minderId: string; listingId?: string }
   BookingRequest: { minderId: string }
   BookingDetails: { bookingId: string }
   PetProfile: { petId: string }
@@ -48,7 +48,7 @@ export type OwnerStackParamList = {
   LeaveReview: { bookingId: string; revieweeId: string }
   Chat: { threadId: string; otherUserId: string }
   MindersMap: undefined
-  MinderLocationMap: { minderId: string }
+  MinderLocationMap: { minderId: string; listingId?: string }
   CreateTicket: undefined
   /** Accept/decline when someone books you as minder (same screen as Minder stack). */
   JobDetails: { bookingId: string }
